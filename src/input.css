@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-primary: #ff6600;
+  --color-secondary: #333333;
+
+  /* Định nghĩa font chữ custom nếu thích */
+  --font-display: 'Inter', sans-serif;
+}
