@@ -82,6 +82,25 @@ yarn tailwind:watch
 
 ---
 
+* **How it looks:** [Download MongoDB v8.3.2 (MSI)](https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.3.2-signed.msi)
+
+---
+
+### 2. Put it in an Installation Guide (Recommended)
+It is always best to give the user context. You can copy and paste this standard installation section into your README:
+
+```markdown
+## 🛠️ Installation Setup
+
+### Prerequisites
+Before running the project, you need to install MongoDB on your Windows machine:
+
+1. **Download:** Click here to [Download MongoDB v8.3.2 (.msi)](https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.3.2-signed.msi).
+2. **Install:** Run the `.msi` installer and follow the setup wizard (Choosing the **"Complete"** setup type is recommended).
+3. **Service:** Make sure to check **"Install MongoDB as a Service"** so it runs automatically in the background.
+
+> 💡 **Tip:** We highly recommend downloading [MongoDB Compass](https://www.mongodb.com/try/download/compass) as well for a GUI to manage your database easily.
+
 ## 📄 Configuration Files (`package.json`)
 
 Ensure your `package.json` inside the `MenuQr` directory matches this exact configuration for the commands above to work:
