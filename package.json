@@ -6,7 +6,7 @@
   "author": "AwtichDev",
   "license": "ISC",
   "scripts": {
-    "tailwind:watch": "tailwindcss -i ./src/input.css -o ./wwwroot/css/site.css --watch",
+    "tailwind:watch": "tailwindcss -i ./wwwroot/css/input.css -o ./wwwroot/css/site.css --watch",
     "dev": "concurrently \"yarn tailwind:watch\" \"dotnet watch\""
   },
   "devDependencies": {

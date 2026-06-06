@@ -4,9 +4,9 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] | Hadilao</title>
     <link rel="shortcut icon" href="/images/favicon/favicon.webp?v=2" type="image/x-icon">
-    <link rel="stylesheet" href="~/css/site.css" />
+    <title>@ViewData["Title"] | Hadilao</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
@@ -14,12 +14,11 @@
     <div id="root">
         <div class="content-wrapper max-w-screen-2xl mx-auto text-base">
             <header id="main-header"
-                    class="fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-transparent text-white ">
+                    class="fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-white text-black shadow-md ">
                 <nav class="relative max-w-[1440px] mx-auto px-6 h-20 flex justify-between items-center">
 
                     <a href="/" class="flex items-center gap-2 group z-10">
-                        <img id="logo" src="~/images/logo/logo.webp" alt="Logo"
-                             class="w-auto h-10 object-contain brightness-0 invert ">
+                        <img id="logo" src="~/images/logo/logo.webp" alt="Logo" class="w-auto h-10 object-contain  ">
                     </a>
 
                     <ul class="hidden lg:flex items-center gap-6 xl:gap-8 font-bold text-[16px] h-full">
@@ -30,7 +29,7 @@
                         <li><a href="#" class="ct-menu">Tuyển dụng</a></li>
 
                         <li class="relative group h-full flex items-center cursor-pointer">
-                            <a class="ct-menu flex items-center gap-1.5 py-8">
+                            <a class="ct-menu">
                                 Về Haidilao <i
                                 class="fa-solid fa-chevron-down text-[11px] mt-0.5 group-hover:rotate-180 transition-transform duration-300"></i>
                             </a>
@@ -53,8 +52,8 @@
                                 </ul>
 
                                 <div class="z-10 flex items-center gap-4">
-                                    <a href="#" id="booking-btn"
-                                       class="px-6 py-2 rounded-full border border-current font-bold transition-all duration-300 hover:bg-white hover:text-black">
+                                    <a href="#"
+                                       class="px-6 py-2 rounded-full border  font-bold transition-all duration-300 bg-[#E60012] text-white border-[#E60012] hover:bg-white hover:text-black">
                                         Đặt bàn
                                     </a>
 
@@ -130,7 +129,7 @@
     
 
    
-                        <script type="module" src="~/js/site.js" asp-append-version="true"></script>
+                        <script type="module" src="~/js/siteProducts.js" asp-append-version="true"></script>
                         @await RenderSectionAsync("Scripts", required: false)
                     </body>
 
