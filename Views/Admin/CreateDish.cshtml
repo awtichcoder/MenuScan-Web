@@ -1,0 +1,264 @@
+@model MenuQr.Models.Mongo.Dish
+@{
+    Layout = null;
+    var categories = ViewBag.Categories as IEnumerable<MenuQr.Models.Mongo.Category> ?? new List<MenuQr.Models.Mongo.Category>();
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thêm Món Ăn Mới - MenuScan</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="~/css/site.css" />
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex overflow-hidden">
+
+    <!-- 1. Left Sidebar -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between p-4 flex-shrink-0 border-r border-slate-800">
+        <div class="space-y-8">
+            <div class="flex items-center gap-3 px-2">
+                <div class="w-9 h-9 rounded-xl bg-[#FF6B35] flex items-center justify-center font-black text-white text-base shadow-lg shadow-orange-500/20">MS</div>
+                <div>
+                    <h2 class="text-sm font-black tracking-wider">HADILAO</h2>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Trang Quản Trị</span>
+                </div>
+            </div>
+
+            <nav class="space-y-1.5">
+                <a href="/Admin" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+                    <i data-lucide="layout-dashboard" class="w-4.5 h-4.5"></i>
+                    <span>Bảng Điều Khiển</span>
+                </a>
+                <a href="/Admin/Dishes" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold bg-[#FF6B35] text-white">
+                    <i data-lucide="utensils" class="w-4.5 h-4.5"></i>
+                    <span>Quản Lý Món Ăn</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="space-y-4 border-t border-slate-800 pt-4">
+            <form asp-controller="Account" asp-action="Logout" method="POST">
+                <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 transition-all">
+                    <i data-lucide="log-out" class="w-4.5 h-4.5"></i>
+                    <span>Đăng Xuất</span>
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Right panel -->
+    <div class="flex-grow flex flex-col overflow-hidden">
+        
+        <!-- Header -->
+        <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <a href="/Admin/Dishes" class="p-1.5 hover:bg-slate-100 rounded-full transition-colors">
+                    <i data-lucide="arrow-left" class="w-5 h-5 text-slate-500"></i>
+                </a>
+                <div>
+                    <h1 class="text-lg font-extrabold text-slate-800">Thêm Món Ăn Mới</h1>
+                    <p class="text-[10px] text-slate-400 font-medium">Thiết lập thông tin, kích cỡ, món ăn thêm và tải ảnh đại diện lên MongoDB</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Form Scrollable Panel -->
+        <main class="flex-grow overflow-y-auto p-6">
+            <div class="max-w-4xl bg-white border border-slate-200 shadow-sm rounded-3xl p-6 md:p-8">
+                
+                <form asp-action="CreateDish" method="POST" enctype="multipart/form-data" id="dishForm" class="space-y-6">
+                    
+                    <!-- Hidden JSON data collectors -->
+                    <input type="hidden" name="sizesJson" id="sizesJson" />
+                    <input type="hidden" name="toppingsJson" id="toppingsJson" />
+
+                    <!-- General info -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Dish Name -->
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Tên Món Ăn <span class="text-rose-500">*</span></label>
+                            <input type="text" asp-for="Name" required placeholder="E.g. Lẩu Thái, Nước sâm..." 
+                                   class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 focus:border-[#FF6B35]" />
+                        </div>
+
+                        <!-- Price -->
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Giá Cơ Bản (VND) <span class="text-rose-500">*</span></label>
+                            <input type="number" asp-for="Price" required min="0" placeholder="E.g. 99000..." 
+                                   class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 focus:border-[#FF6B35]" />
+                        </div>
+
+                        <!-- Category -->
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Danh Mục Phân Loại <span class="text-rose-500">*</span></label>
+                            <select asp-for="CategoryId" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 focus:border-[#FF6B35]" required>
+                                <option value="">-- Chọn danh mục --</option>
+                                @foreach (var cat in categories)
+                                {
+                                    <option value="@cat.Id">@cat.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Image upload file (thay đổi hình ảnh) -->
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Hình Ảnh Đại Diện</label>
+                            <input type="file" name="imageFile" accept="image/*" id="imageInput"
+                                   class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 focus:border-[#FF6B35] file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-[#FF6B35] hover:file:bg-orange-100" />
+                            <div class="mt-2 hidden" id="previewContainer">
+                                <img src="#" id="imagePreview" class="w-24 h-24 object-cover rounded-xl border border-slate-200" alt="Preview" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Mô Tả Chi Tiết</label>
+                        <textarea asp-for="Description" rows="3" placeholder="Mô tả nguyên liệu, hương vị món ăn..." 
+                                  class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 focus:border-[#FF6B35]"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                        <!-- Dynamic sizes list manager -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-black text-slate-700 uppercase tracking-wider">Kích Cỡ Món Ăn (Sizes)</label>
+                                <button type="button" onclick="addSizeField()" class="text-[#FF6B35] hover:text-[#FF8552] text-xs font-bold flex items-center gap-0.5">
+                                    <i data-lucide="plus" class="w-4 h-4"></i> Thêm Size
+                                </button>
+                            </div>
+                            
+                            <div class="space-y-2" id="sizesContainer">
+                                <!-- Pre-seed Standard defaults S, M, L -->
+                                <div class="flex gap-2 items-center size-row">
+                                    <input type="text" placeholder="Tên size (E.g. Nhỏ, Vừa, Lớn)" value="Vừa" class="flex-grow px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold size-name" />
+                                    <input type="number" placeholder="+Giá (VND)" value="0" class="w-28 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold size-adjustment" />
+                                    <button type="button" onclick="removeRow(this)" class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic toppings list manager -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-black text-slate-700 uppercase tracking-wider">Món Ăn Kèm Thêm (Toppings)</label>
+                                <button type="button" onclick="addToppingField()" class="text-[#FF6B35] hover:text-[#FF8552] text-xs font-bold flex items-center gap-0.5">
+                                    <i data-lucide="plus" class="w-4 h-4"></i> Thêm Topping
+                                </button>
+                            </div>
+
+                            <div class="space-y-2" id="toppingsContainer">
+                                <!-- Empty starting -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit action footer -->
+                    <div class="pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <a href="/Admin/Dishes" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs transition-all border border-slate-200">
+                            Hủy Bỏ
+                        </a>
+                        <button type="submit" class="px-6 py-3 bg-[#FF6B35] hover:bg-[#FF8552] text-white font-bold rounded-xl text-xs shadow-lg shadow-orange-500/10 active:scale-95 transition-all cursor-pointer">
+                            Thêm Món Ăn
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripting for Dynamic managers -->
+    <script>
+        lucide.createIcons();
+
+        // 1. Live image preview
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = document.getElementById('imagePreview');
+                    img.src = event.target.result;
+                    document.getElementById('previewContainer').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 2. Add Size fields dynamically
+        function addSizeField(name = '', price = 0) {
+            const container = document.getElementById('sizesContainer');
+            const row = document.createElement('div');
+            row.className = "flex gap-2 items-center size-row animate-fade-in";
+            row.innerHTML = `
+                <input type="text" placeholder="Tên size (E.g. Nhỏ, Vừa, Lớn)" value="${name}" class="flex-grow px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold size-name" />
+                <input type="number" placeholder="+Giá (VND)" value="${price}" class="w-28 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold size-adjustment" />
+                <button type="button" onclick="removeRow(this)" class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            `;
+            container.appendChild(row);
+            lucide.createIcons();
+        }
+
+        // 3. Add Topping fields dynamically
+        function addToppingField(name = '', price = 0) {
+            const container = document.getElementById('toppingsContainer');
+            const row = document.createElement('div');
+            row.className = "flex gap-2 items-center topping-row animate-fade-in";
+            row.innerHTML = `
+                <input type="text" placeholder="Tên topping (E.g. Bò viên, Kim chi)" value="${name}" class="flex-grow px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold topping-name" />
+                <input type="number" placeholder="Giá tiền (VND)" value="${price}" class="w-28 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold topping-price" />
+                <button type="button" onclick="removeRow(this)" class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            `;
+            container.appendChild(row);
+            lucide.createIcons();
+        }
+
+        function removeRow(btn) {
+            btn.parentElement.remove();
+        }
+
+        // 4. Form Submit JSON aggregation
+        document.getElementById('dishForm').addEventListener('submit', function(e) {
+            // Pack Sizes
+            const sizes = [];
+            document.querySelectorAll('.size-row').forEach(row => {
+                const name = row.querySelector('.size-name').value.trim();
+                const adj = parseFloat(row.querySelector('.size-adjustment').value) || 0;
+                if (name) {
+                    sizes.push({ Name: name, PriceAdjustment: adj });
+                }
+            });
+            document.getElementById('sizesJson').value = JSON.stringify(sizes);
+
+            // Pack Toppings
+            const toppings = [];
+            document.querySelectorAll('.topping-row').forEach(row => {
+                const name = row.querySelector('.topping-name').value.trim();
+                const price = parseFloat(row.querySelector('.topping-price').value) || 0;
+                if (name) {
+                    toppings.push({ Name: name, Price: price });
+                }
+            });
+            document.getElementById('toppingsJson').value = JSON.stringify(toppings);
+        });
+    </script>
+</body>
+</html>

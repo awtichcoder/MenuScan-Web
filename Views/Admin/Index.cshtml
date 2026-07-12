@@ -1,0 +1,267 @@
+@{
+    Layout = null;
+    var recentInvoices = ViewBag.RecentInvoices as IEnumerable<MenuQr.Models.Sql.Invoice> ?? new List<MenuQr.Models.Sql.Invoice>();
+    var chartLabels = ViewBag.ChartLabels as List<string> ?? new List<string>();
+    var chartData = ViewBag.ChartData as List<double> ?? new List<double>();
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản Trị - MenuScan</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="~/css/site.css" />
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex overflow-hidden">
+
+    <!-- 1. Left Sidebar Component -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between p-4 flex-shrink-0 border-r border-slate-800">
+        <div class="space-y-8">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3 px-2">
+                <div class="w-9 h-9 rounded-xl bg-[#FF6B35] flex items-center justify-center font-black text-white text-base shadow-lg shadow-orange-500/20">MS</div>
+                <div>
+                    <h2 class="text-sm font-black tracking-wider">HADILAO</h2>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Trang Quản Trị</span>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="space-y-1.5">
+                <a href="/Admin" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold bg-[#FF6B35] text-white">
+                    <i data-lucide="layout-dashboard" class="w-4.5 h-4.5"></i>
+                    <span>Bảng Điều Khiển</span>
+                </a>
+                <a href="/Admin/Dishes" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+                    <i data-lucide="utensils" class="w-4.5 h-4.5"></i>
+                    <span>Quản Lý Món Ăn</span>
+                </a>
+                <a href="/Cashier" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+                    <i data-lucide="wallet" class="w-4.5 h-4.5"></i>
+                    <span>Màn Hình Thu Ngân</span>
+                </a>
+                <a href="/Kitchen" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+                    <i data-lucide="flame" class="w-4.5 h-4.5"></i>
+                    <span>Màn Hình Bếp</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Logout Action and User Profile -->
+        <div class="space-y-4 border-t border-slate-800 pt-4">
+            <div class="flex items-center gap-2.5 px-2">
+                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-slate-300 text-xs">AD</div>
+                <div>
+                    <h5 class="text-xs font-bold text-slate-200 leading-none">Administrator</h5>
+                    <span class="text-[9px] text-[#FF6B35] font-semibold mt-1 inline-block">Chủ Cửa Hàng</span>
+                </div>
+            </div>
+            
+            <form asp-controller="Account" asp-action="Logout" method="POST">
+                <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 transition-all">
+                    <i data-lucide="log-out" class="w-4.5 h-4.5"></i>
+                    <span>Đăng Xuất</span>
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Right Board Content -->
+    <div class="flex-grow flex flex-col overflow-hidden">
+        
+        <!-- Header Component -->
+        <header class="h-16 bg-white border-b border-slate-200 px-6 flex justify-between items-center flex-shrink-0">
+            <div>
+                <h1 class="text-lg font-extrabold text-slate-800">Bảng Điều Khiển Doanh Thu & Hệ Thống</h1>
+                <p class="text-[10px] text-slate-400 font-medium">Theo dõi báo cáo bán hàng, thống kê số liệu tổng quan</p>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <!-- Clock -->
+                <div class="text-right">
+                    <div class="text-xs font-bold text-slate-700" id="liveClock">--:--:--</div>
+                    <div class="text-[9px] text-slate-400 font-semibold uppercase">@DateTime.UtcNow.ToString("dd/MM/yyyy")</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Scrollable Panel -->
+        <main class="flex-grow overflow-y-auto p-6 space-y-6">
+
+            <!-- KPI Cards Row -->
+            <div class="grid grid-cols-4 gap-4">
+                <!-- Total revenue -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-wider block">Tổng Doanh Thu</span>
+                        <span class="text-2xl font-black text-emerald-500 mt-1 block">@(((decimal)ViewBag.TotalRevenue).ToString("N0"))₫</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                        <i data-lucide="banknote" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- Total completed invoices -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-wider block">Hóa Đơn Hoàn Tất</span>
+                        <span class="text-2xl font-black text-blue-500 mt-1 block">@ViewBag.CompletedOrdersCount đơn</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
+                        <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- Total dishes -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-wider block">Món Ăn Thực Đơn</span>
+                        <span class="text-2xl font-black text-amber-500 mt-1 block">@ViewBag.DishesCount món</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
+                        <i data-lucide="utensils" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- Total categories -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-wider block">Danh Mục Món Ăn</span>
+                        <span class="text-2xl font-black text-purple-500 mt-1 block">@ViewBag.CategoriesCount nhóm</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center">
+                        <i data-lucide="layers" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart and Recent transaction splits -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Sales chart line -->
+                <div class="lg:col-span-8 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Doanh Thu 7 Ngày Gần Nhất</h3>
+                    <div class="h-64">
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions table -->
+                <div class="lg:col-span-4 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-3">Giao Dịch Gần Nhất</h3>
+                        
+                        <div class="divide-y divide-slate-100 mt-2">
+                            @foreach (var inv in recentInvoices)
+                            {
+                                <div class="py-2.5 flex justify-between items-center text-xs">
+                                    <div>
+                                        <span class="font-bold text-slate-700 block">Bàn @(inv.Order?.TableNumber ?? "N/A")</span>
+                                        <span class="text-[9px] text-slate-400">@inv.PaymentDate.ToLocalTime().ToString("HH:mm") | @(inv.PaymentMethod == "Cash" ? "Tiền Mặt" : "Bank")</span>
+                                    </div>
+                                    <span class="font-bold text-emerald-500">@inv.FinalAmount.ToString("N0")₫</span>
+                                </div>
+                            }
+                            @if (!recentInvoices.Any())
+                            {
+                                <div class="text-center py-8 text-slate-400 text-xs">Chưa có giao dịch thanh toán nào được thực hiện.</div>
+                            }
+                        </div>
+                    </div>
+                    
+                    <a href="/Cashier" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-center block text-xs border border-slate-200">
+                        Quản Lý Tại Quầy Thu Ngân
+                    </a>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Scripting for Clock and Charts -->
+    <script>
+        lucide.createIcons();
+
+        // 1. Clock
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('liveClock').innerText = timeStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // 2. Chart.js Config
+        const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartLabels));
+        const data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartData));
+
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Doanh thu (VND)',
+                    data: data,
+                    borderColor: '#FF6B35',
+                    backgroundColor: 'rgba(255, 107, 53, 0.05)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#FF6B35'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#F1F5F9'
+                        },
+                        ticks: {
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 10
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

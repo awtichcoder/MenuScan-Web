@@ -1,0 +1,169 @@
+@model ActiveOrder
+@{
+    ViewData["Title"] = "Theo dõi đơn hàng";
+}
+
+<div class="px-4 py-4 space-y-5 flex-grow flex flex-col bg-white">
+
+    <!-- Header navigation -->
+    <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
+        <a href="/Home/Menu" class="p-1.5 text-slate-500 hover:text-slate-800 rounded-full hover:bg-slate-50 transition-colors">
+            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        </a>
+        <h2 class="text-sm font-bold text-slate-700">Trạng Thái Đơn Hàng</h2>
+    </div>
+
+    <!-- Live Status Banner -->
+    <div class="text-center py-6 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+        <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Thời Gian Chờ Dự Kiến</div>
+        
+        @if (Model.Status == "Pending")
+        {
+            <div class="text-3xl font-black text-slate-700 tracking-tight">15 - 20 phút</div>
+            <p class="text-[11px] text-amber-500 font-semibold animate-pulse">Đang đợi nhà bếp nhận đơn...</p>
+        }
+        else if (Model.Status == "Cooking")
+        {
+            <div class="text-3xl font-black text-[#FF6B35] tracking-tight">10 - 12 phút</div>
+            <p class="text-[11px] text-[#FF6B35] font-semibold animate-pulse">Đầu bếp đang chế biến món ăn!</p>
+        }
+        else if (Model.Status == "Ready")
+        {
+            <div class="text-3xl font-black text-emerald-500 tracking-tight">Đã Nấu Xong!</div>
+            <p class="text-[11px] text-emerald-500 font-semibold animate-bounce">Đang được mang ra bàn của bạn!</p>
+        }
+    </div>
+
+    <!-- Stepper Pipeline -->
+    <div class="space-y-4 px-2">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tiến Độ Thực Hiện</h3>
+        
+        <div class="flex flex-col gap-6 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-100">
+            
+            <!-- Step 1: Order Sent -->
+            <div class="flex gap-4 items-start relative z-10">
+                <div class="w-6.5 h-6.5 rounded-full bg-emerald-500 text-white flex items-center justify-center border-4 border-emerald-50 text-xs font-bold">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-slate-700">Gửi Đơn Thành Công</h4>
+                    <p class="text-[10px] text-slate-400 font-light mt-0.5">Nhà bếp và quầy thu ngân đã nhận thông tin đơn.</p>
+                </div>
+            </div>
+
+            <!-- Step 2: Preparing / Cooking -->
+            @{
+                bool isCooking = Model.Status == "Cooking" || Model.Status == "Ready";
+                string step2Bg = isCooking ? "bg-emerald-500 text-white border-emerald-50" : (Model.Status == "Pending" ? "bg-amber-400 text-white border-amber-50 animate-pulse" : "bg-slate-200 text-slate-400 border-slate-50");
+            }
+            <div class="flex gap-4 items-start relative z-10">
+                <div class="w-6.5 h-6.5 rounded-full @step2Bg flex items-center justify-center border-4 text-xs font-bold">
+                    @if (isCooking)
+                    {
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    }
+                    else
+                    {
+                        <i data-lucide="flame" class="w-3.5 h-3.5"></i>
+                    }
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold @(isCooking ? "text-slate-700" : "text-slate-400")">Đang Chế Biến</h4>
+                    <p class="text-[10px] text-slate-400 font-light mt-0.5">Đầu bếp đang chuẩn bị nguyên liệu và nấu.</p>
+                </div>
+            </div>
+
+            <!-- Step 3: Food Ready -->
+            @{
+                bool isReady = Model.Status == "Ready";
+                string step3Bg = isReady ? "bg-emerald-500 text-white border-emerald-50" : (Model.Status == "Cooking" ? "bg-amber-400 text-white border-amber-50 animate-pulse" : "bg-slate-200 text-slate-400 border-slate-50");
+            }
+            <div class="flex gap-4 items-start relative z-10">
+                <div class="w-6.5 h-6.5 rounded-full @step3Bg flex items-center justify-center border-4 text-xs font-bold">
+                    @if (isReady)
+                    {
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    }
+                    else
+                    {
+                        <i data-lucide="bell" class="w-3.5 h-3.5"></i>
+                    }
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold @(isReady ? "text-slate-700" : "text-slate-400")">Món Ăn Sẵn Sàng</h4>
+                    <p class="text-[10px] text-slate-400 font-light mt-0.5">Món ăn đã chuẩn bị xong và chuẩn bị phục vụ.</p>
+                </div>
+            </div>
+
+            <!-- Step 4: Finished -->
+            <div class="flex gap-4 items-start relative z-10">
+                <div class="w-6.5 h-6.5 rounded-full bg-slate-200 text-slate-400 border-slate-50 flex items-center justify-center border-4 text-xs font-bold">
+                    <i data-lucide="credit-card" class="w-3.5 h-3.5"></i>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-slate-400">Hoàn Thành & Đã Thanh Toán</h4>
+                    <p class="text-[10px] text-slate-400 font-light mt-0.5">Thanh toán hoàn tất tại quầy và dọn bàn.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Active item details list -->
+    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100/50 space-y-3 mt-4">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Danh Sách Món Đã Đặt</h3>
+        <div class="divide-y divide-slate-100">
+            @foreach (var item in Model.Items)
+            {
+                <div class="py-2 flex justify-between text-xs">
+                    <div>
+                        <span class="font-bold text-slate-700">@item.Quantity × @item.DishName</span>
+                        <span class="block text-[10px] text-slate-400">Size: @item.SelectedSize @(item.SelectedToppings.Any() ? " | Món thêm: " + string.Join(", ", item.SelectedToppings) : "")</span>
+                    </div>
+                    <span class="font-bold text-slate-600">@((item.Price * item.Quantity).ToString("N0"))₫</span>
+                </div>
+            }
+        </div>
+        <div class="border-t border-slate-100 pt-2.5 flex justify-between items-center text-xs font-bold text-slate-700">
+            <span>Tổng số tiền</span>
+            <span class="text-[#FF6B35]">@Model.TotalAmount.ToString("N0")₫</span>
+        </div>
+    </div>
+
+    <!-- Order More Button -->
+    <div class="pt-4 pb-20">
+        <a href="/Home/Menu" class="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl active:scale-95 transition-all text-center block text-xs border border-slate-200">
+            Gọi Thêm Món Ăn Khác
+        </a>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        // Automatic polling: every 5 seconds check the status
+        setInterval(async () => {
+            try {
+                const response = await fetch(window.location.href);
+                // If order is completed (deleted from ActiveOrders in MongoDB), redirect to Menu
+                if (response.status === 404 || response.redirected) {
+                    window.location.href = '/Home/Menu';
+                    return;
+                }
+                
+                // Reload page to reflect status update dynamically
+                const htmlText = await response.text();
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(htmlText, 'text/html');
+                
+                // Swap main element content to avoid page flicker
+                document.querySelector('main').innerHTML = newDoc.querySelector('main').innerHTML;
+                
+                // Re-initialize Lucide Icons
+                lucide.createIcons();
+            } catch (err) {
+                console.error("Status polling failed", err);
+            }
+        }, 5000);
+    </script>
+}

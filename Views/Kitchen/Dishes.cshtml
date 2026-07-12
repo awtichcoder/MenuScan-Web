@@ -1,0 +1,247 @@
+@model KitchenDishesViewModel
+@{
+    Layout = null; // Self-contained dashboard design for tablets/desktops (min-width: 1024px)
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tạm Ẩn Món Ăn - Giao Diện Bếp</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="~/css/site.css" />
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex overflow-hidden">
+
+    <!-- 1. Left Sidebar Component -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between p-4 flex-shrink-0 border-r border-slate-800">
+        <div class="space-y-8">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3 px-2">
+                <div class="w-9 h-9 rounded-xl bg-[#FF6B35] flex items-center justify-center font-black text-white text-base shadow-lg shadow-orange-500/20">MS</div>
+                <div>
+                    <h2 class="text-sm font-black tracking-wider">HADILAO</h2>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Khu Vực Bếp</span>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="space-y-1.5">
+                <a href="/Kitchen" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+                    <i data-lucide="layout-dashboard" class="w-4.5 h-4.5"></i>
+                    <span>Hàng Đợi Chế Biến</span>
+                </a>
+                <a href="/Kitchen/Dishes" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all bg-[#FF6B35] text-white">
+                    <i data-lucide="utensils" class="w-4.5 h-4.5"></i>
+                    <span>Món Ăn Tạm Ẩn</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Logout Action and User Profile -->
+        <div class="space-y-4 border-t border-slate-800 pt-4">
+            <div class="flex items-center gap-2.5 px-2">
+                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-slate-300 text-xs">KC</div>
+                <div>
+                    <h5 class="text-xs font-bold text-slate-200 leading-none">Nhân Viên Bếp</h5>
+                    <span class="text-[9px] text-emerald-500 font-semibold mt-1 inline-block">Đang hoạt động</span>
+                </div>
+            </div>
+            
+            <form asp-controller="Account" asp-action="Logout" method="POST">
+                <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 transition-all">
+                    <i data-lucide="log-out" class="w-4.5 h-4.5"></i>
+                    <span>Đăng Xuất</span>
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Right Content Panel -->
+    <div class="flex-grow flex flex-col overflow-hidden">
+        
+        <!-- 2. Header Component -->
+        <header class="h-16 bg-white border-b border-slate-200 px-6 flex justify-between items-center flex-shrink-0">
+            <div>
+                <h1 class="text-lg font-extrabold text-slate-800">Tạm Ẩn Món Ăn</h1>
+                <p class="text-[10px] text-slate-400 font-medium">Bật / Tắt trạng thái hiển thị món khi hết nguyên liệu phục vụ</p>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <!-- Clock -->
+                <div class="text-right">
+                    <div class="text-xs font-bold text-slate-700" id="liveClock">--:--:--</div>
+                    <div class="text-[9px] text-slate-400 font-semibold uppercase">@DateTime.UtcNow.ToString("dd/MM/yyyy")</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Scrollable Area -->
+        <main class="flex-grow overflow-y-auto p-6 space-y-6">
+
+            <!-- 3. Search and Category Filter -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-4 flex-wrap">
+                
+                <!-- Search Box -->
+                <form method="GET" action="/Kitchen/Dishes" class="relative w-80">
+                    <input type="hidden" name="categoryId" value="@Model.SelectedCategoryId" />
+                    <input type="text" name="search" value="@Model.SearchQuery" placeholder="Tìm tên món ăn cần bật/tắt..." 
+                           class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-slate-50" />
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                </form>
+
+                <!-- Category Filters Horizontal Scroll -->
+                <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                    <a href="/Kitchen/Dishes?search=@Model.SearchQuery" 
+                       class="px-4 py-2 text-xs font-bold rounded-xl border transition-all whitespace-nowrap @(string.IsNullOrEmpty(Model.SelectedCategoryId) ? "bg-[#FF6B35] text-white border-transparent" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50")">
+                        Tất Cả Danh Mục
+                    </a>
+                    @foreach (var cat in Model.Categories)
+                    {
+                        <a href="/Kitchen/Dishes?categoryId=@cat.Id&search=@Model.SearchQuery" 
+                           class="px-4 py-2 text-xs font-bold rounded-xl border transition-all whitespace-nowrap @(Model.SelectedCategoryId == cat.Id ? "bg-[#FF6B35] text-white border-transparent" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50")">
+                            @cat.Name
+                        </a>
+                    }
+                </div>
+
+            </div>
+
+            <!-- 4. Dishes Toggle Grid -->
+            @if (!Model.Dishes.Any())
+            {
+                <div class="bg-white rounded-3xl p-16 text-center border border-slate-200 shadow-sm space-y-3 max-w-lg mx-auto mt-8">
+                    <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-300 mx-auto">
+                        <i data-lucide="help-circle" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-700">Không tìm thấy món ăn</h4>
+                        <p class="text-xs text-slate-400 font-light mt-1">Hãy thử xóa bộ lọc tìm kiếm hoặc xem lại danh mục đã chọn.</p>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    @foreach (var dish in Model.Dishes)
+                    {
+                        var categoryName = Model.Categories.FirstOrDefault(c => c.Id == dish.CategoryId)?.Name ?? "Món chính";
+                        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow duration-300">
+                            <!-- Image Header -->
+                            <div class="w-full h-40 bg-slate-100 overflow-hidden relative">
+                                <img src="@(string.IsNullOrEmpty(dish.Image) ? "/images/menu/default.webp" : dish.Image)" 
+                                     class="w-full h-full object-cover" 
+                                     alt="@dish.Name"
+                                     onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300'"/>
+                                
+                                <span class="absolute top-2 left-2 px-2.5 py-1 bg-slate-900/80 backdrop-blur-sm text-white text-[9px] font-bold rounded-lg uppercase tracking-wider">
+                                    @categoryName
+                                </span>
+                            </div>
+
+                            <!-- Content Details -->
+                            <div class="p-4 flex-grow space-y-1">
+                                <h4 class="text-sm font-extrabold text-slate-800 line-clamp-1">@dish.Name</h4>
+                                <p class="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">@dish.Description</p>
+                                <span class="text-sm font-black text-[#FF6B35] block pt-1">@dish.Price.ToString("N0")₫</span>
+                            </div>
+
+                            <!-- Toggle Footer Panel -->
+                            <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4">
+                                <span id="statusText-@dish.Id" class="text-xs font-bold @(dish.Available ? "text-emerald-500" : "text-slate-400")">
+                                    @(dish.Available ? "Đang Phục Vụ" : "Hết Nguyên Liệu")
+                                </span>
+
+                                <!-- Toggle Switch Button UI -->
+                                <button onclick="toggleAvailability('@dish.Id')" 
+                                        id="toggleBtn-@dish.Id" 
+                                        class="w-12 h-6.5 rounded-full p-1 flex items-center transition-all duration-300 cursor-pointer @(dish.Available ? "bg-emerald-500 justify-end" : "bg-slate-300 justify-start")">
+                                    <span class="w-4.5 h-4.5 bg-white rounded-full shadow-md transform transition-transform"></span>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+        </main>
+    </div>
+
+    <!-- Scripting for Clock and AJAX toggles -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        lucide.createIcons();
+
+        // Live Clock
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('liveClock').innerText = timeStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // AJAX Toggle Availability
+        async function toggleAvailability(dishId) {
+            try {
+                const response = await fetch('/Kitchen/ToggleAvailability', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `dishId=${dishId}`
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    const statusText = document.getElementById(`statusText-${dishId}`);
+                    const toggleBtn = document.getElementById(`toggleBtn-${dishId}`);
+
+                    if (result.isAvailable) {
+                        statusText.innerText = "Đang Phục Vụ";
+                        statusText.className = "text-xs font-bold text-emerald-500";
+                        toggleBtn.className = "w-12 h-6.5 bg-emerald-500 rounded-full p-1 flex items-center justify-end transition-all duration-300 cursor-pointer";
+                    } else {
+                        statusText.innerText = "Hết Nguyên Liệu";
+                        statusText.className = "text-xs font-bold text-slate-400";
+                        toggleBtn.className = "w-12 h-6.5 bg-slate-300 rounded-full p-1 flex items-center justify-start transition-all duration-300 cursor-pointer";
+                    }
+
+                    // Toast Feedback
+                    Swal.fire({
+                        title: result.isAvailable ? 'Món ăn đã mở lại' : 'Món ăn đã ẩn tạm thời',
+                        icon: 'info',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire({
+                    title: 'Lỗi',
+                    text: 'Không thể cập nhật trạng thái món ăn.',
+                    icon: 'error',
+                    confirmButtonColor: '#FF6B35'
+                });
+            }
+        }
+    </script>
+</body>
+</html>

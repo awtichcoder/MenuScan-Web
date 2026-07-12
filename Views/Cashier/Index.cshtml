@@ -1,0 +1,265 @@
+@model IEnumerable<MenuQr.Controllers.TableStatusDto>
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thu Ngân - MenuScan</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="~/css/site.css" />
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex overflow-hidden">
+
+    <!-- 1. Left Sidebar Component -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between p-4 flex-shrink-0 border-r border-slate-800">
+        <div class="space-y-8">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3 px-2">
+                <div class="w-9 h-9 rounded-xl bg-[#FF6B35] flex items-center justify-center font-black text-white text-base shadow-lg shadow-orange-500/20">MS</div>
+                <div>
+                    <h2 class="text-sm font-black tracking-wider">HADILAO</h2>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Thu Ngân Panel</span>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="space-y-1.5">
+                <a href="/Cashier" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all bg-[#FF6B35] text-white">
+                    <i data-lucide="layout-grid" class="w-4.5 h-4.5"></i>
+                    <span>Sơ Đồ Bàn Ăn</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Logout Action and User Profile -->
+        <div class="space-y-4 border-t border-slate-800 pt-4">
+            <div class="flex items-center gap-2.5 px-2">
+                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-slate-300 text-xs">TN</div>
+                <div>
+                    <h5 class="text-xs font-bold text-slate-200 leading-none">Thu Ngân</h5>
+                    <span class="text-[9px] text-emerald-500 font-semibold mt-1 inline-block">Đang trực</span>
+                </div>
+            </div>
+            
+            <form asp-controller="Account" asp-action="Logout" method="POST">
+                <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 transition-all">
+                    <i data-lucide="log-out" class="w-4.5 h-4.5"></i>
+                    <span>Đăng Xuất</span>
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Right Board Content -->
+    <div class="flex-grow flex flex-col overflow-hidden">
+        
+        <!-- 2. Header Component -->
+        <header class="h-16 bg-white border-b border-slate-200 px-6 flex justify-between items-center flex-shrink-0">
+            <div>
+                <h1 class="text-lg font-extrabold text-slate-800">Sơ Đồ Trạng Thái Bàn Ăn</h1>
+                <p class="text-[10px] text-slate-400 font-medium">Theo dõi giỏ hàng, phục vụ và thanh toán các bàn</p>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <!-- Clock -->
+                <div class="text-right">
+                    <div class="text-xs font-bold text-slate-700" id="liveClock">--:--:--</div>
+                    <div class="text-[9px] text-slate-400 font-semibold uppercase">@DateTime.UtcNow.ToString("dd/MM/yyyy")</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Scrollable Panel -->
+        <main class="flex-grow overflow-y-auto p-6 space-y-6">
+
+            <!-- 3. Summary stats cards -->
+            <div class="grid grid-cols-3 gap-4">
+                <!-- Active Tables -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-wider block">Bàn đang sử dụng</span>
+                        <span class="text-2xl font-black text-blue-500 mt-1 block">@ViewBag.ActiveOrdersCount / 10</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
+                        <i data-lucide="utensils" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- Call Staff Requests -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-wider block">Yêu cầu gọi nhân viên</span>
+                        <span class="text-2xl font-black text-rose-500 mt-1 block">@ViewBag.StaffCallsCount</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- Legend Indicator -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1.5 text-[10px] font-bold text-slate-500">
+                    <span class="uppercase tracking-wider block text-slate-400 mb-1">Chú thích màu sắc</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded bg-emerald-500"></span> <span>Bàn Trống (Có sẵn)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded bg-blue-500"></span> <span>Đang dùng bữa (Nấu/Ăn)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded bg-amber-500 animate-pulse"></span> <span>Món Đã Sẵn Sàng / Đợi tính tiền</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded bg-rose-500"></span> <span>Đang Gọi Nhân Viên</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback Alert -->
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="bg-rose-50 border border-rose-100 text-rose-600 px-4 py-3 rounded-2xl text-xs font-semibold">
+                    @TempData["ErrorMessage"]
+                </div>
+            }
+
+            <!-- 4. Table Grid Visual Map -->
+            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
+                @foreach (var table in Model)
+                {
+                    // Map status color variables
+                    string statusColor = "bg-emerald-500 border-emerald-600 text-white";
+                    string statusText = "Bàn Trống";
+                    string linkUrl = "javascript:void(0)";
+                    
+                    if (table.Status == "Dining")
+                    {
+                        statusColor = "bg-blue-500 border-blue-600 text-white";
+                        statusText = "Đang Dùng Bữa";
+                        linkUrl = $"/Cashier/Detail?tableNumber={table.TableNumber}";
+                    }
+                    else if (table.Status == "Billing")
+                    {
+                        statusColor = "bg-amber-500 border-amber-600 text-white animate-pulse";
+                        statusText = "Đợi Thanh Toán";
+                        linkUrl = $"/Cashier/Detail?tableNumber={table.TableNumber}";
+                    }
+                    else if (table.Status == "CallStaff")
+                    {
+                        statusColor = "bg-rose-500 border-rose-600 text-white animate-bounce";
+                        statusText = "Yêu Cầu Gọi Nhân Viên";
+                        linkUrl = $"/Cashier/Detail?tableNumber={table.TableNumber}";
+                    }
+
+                    <div class="rounded-2xl border bg-white shadow-sm flex flex-col justify-between overflow-hidden relative group hover:shadow-md transition-shadow">
+                        <!-- Table Card Body (Clickable if active) -->
+                        <a href="@linkUrl" class="p-6 flex-grow flex flex-col items-center justify-center text-center space-y-3 cursor-pointer">
+                            <span class="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 font-black text-xl flex items-center justify-center shadow-sm">
+                                @table.TableNumber
+                            </span>
+                            
+                            <div>
+                                <span class="px-2 py-0.5 text-[9px] font-bold uppercase rounded-full @statusColor">
+                                    @statusText
+                                </span>
+                            </div>
+
+                            @if (table.TotalAmount > 0)
+                            {
+                                <span class="text-sm font-black text-[#FF6B35] block pt-1">
+                                    @table.TotalAmount.ToString("N0")₫
+                                </span>
+                            }
+                        </a>
+
+                        <!-- Turn off Call Bell Shortcut Button (if table called staff) -->
+                        @if (table.Status == "CallStaff")
+                        {
+                            <div class="px-3 pb-3 border-t border-slate-50 pt-2 flex justify-center">
+                                <button onclick="clearCallStaff('@table.TableNumber')" 
+                                        class="w-full py-1 bg-slate-900 text-white hover:bg-slate-800 text-[10px] font-bold rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1">
+                                    <i data-lucide="bell-off" class="w-3 h-3"></i>
+                                    <span>Tắt Chuông Gọi</span>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Scripting for Clock and Auto Refresh Table grid -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        lucide.createIcons();
+
+        // 1. Clock
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('liveClock').innerText = timeStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // 2. Clear Staff Caller notification
+        async function clearCallStaff(tableNumber) {
+            try {
+                const response = await fetch(`/Cashier/ClearCallStaff?tableNumber=${tableNumber}`, { method: 'POST' });
+                const result = await response.json();
+                if (result.success) {
+                    Swal.fire({
+                        title: 'Đã tắt chuông!',
+                        text: 'Trạng thái gọi phục vụ bàn ' + tableNumber + ' đã được tắt.',
+                        icon: 'success',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                    setTimeout(() => window.location.reload(), 500);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // 3. Auto Refresh Table Grid Status every 5 seconds
+        setInterval(async () => {
+            try {
+                const response = await fetch(window.location.href);
+                const htmlText = await response.text();
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(htmlText, 'text/html');
+                
+                // Swap main grid and headers
+                document.querySelector('main').innerHTML = newDoc.querySelector('main').innerHTML;
+                lucide.createIcons();
+            } catch (err) {
+                console.error("Lỗi cập nhật sơ đồ bàn ăn", err);
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

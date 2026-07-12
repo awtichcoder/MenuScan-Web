@@ -1,0 +1,225 @@
+@model IEnumerable<MenuQr.Models.Mongo.Dish>
+@{
+    Layout = null;
+    var categories = ViewBag.Categories as IEnumerable<MenuQr.Models.Mongo.Category> ?? new List<MenuQr.Models.Mongo.Category>();
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản Lý Món Ăn - MenuScan</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="~/css/site.css" />
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex overflow-hidden">
+
+    <!-- 1. Left Sidebar -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between p-4 flex-shrink-0 border-r border-slate-800">
+        <div class="space-y-8">
+            <div class="flex items-center gap-3 px-2">
+                <div class="w-9 h-9 rounded-xl bg-[#FF6B35] flex items-center justify-center font-black text-white text-base shadow-lg shadow-orange-500/20">MS</div>
+                <div>
+                    <h2 class="text-sm font-black tracking-wider">HADILAO</h2>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Trang Quản Trị</span>
+                </div>
+            </div>
+
+            <nav class="space-y-1.5">
+                <a href="/Admin" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+                    <i data-lucide="layout-dashboard" class="w-4.5 h-4.5"></i>
+                    <span>Bảng Điều Khiển</span>
+                </a>
+                <a href="/Admin/Dishes" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold bg-[#FF6B35] text-white">
+                    <i data-lucide="utensils" class="w-4.5 h-4.5"></i>
+                    <span>Quản Lý Món Ăn</span>
+                </a>
+                <a href="/Cashier" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+                    <i data-lucide="wallet" class="w-4.5 h-4.5"></i>
+                    <span>Màn Hình Thu Ngân</span>
+                </a>
+                <a href="/Kitchen" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+                    <i data-lucide="flame" class="w-4.5 h-4.5"></i>
+                    <span>Màn Hình Bếp</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="space-y-4 border-t border-slate-800 pt-4">
+            <form asp-controller="Account" asp-action="Logout" method="POST">
+                <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 transition-all">
+                    <i data-lucide="log-out" class="w-4.5 h-4.5"></i>
+                    <span>Đăng Xuất</span>
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Right Panel -->
+    <div class="flex-grow flex flex-col overflow-hidden">
+        
+        <!-- Header -->
+        <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between flex-shrink-0">
+            <div>
+                <h1 class="text-lg font-extrabold text-slate-800">Quản Lý Thực Đơn Món Ăn</h1>
+                <p class="text-[10px] text-slate-400 font-medium">Thêm, sửa, xóa và thay đổi hình ảnh đại diện món ăn trong MongoDB</p>
+            </div>
+            
+            <!-- Add Dish trigger button -->
+            <a href="/Admin/CreateDish" class="px-4 py-2 bg-[#FF6B35] text-white hover:bg-[#FF8552] text-xs font-bold rounded-xl shadow-lg shadow-orange-500/10 transition-all flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="plus-circle" class="w-4.5 h-4.5"></i>
+                <span>Thêm Món Ăn Mới</span>
+            </a>
+        </header>
+
+        <!-- Main Panel -->
+        <main class="flex-grow overflow-y-auto p-6 space-y-6">
+
+            <!-- TempData alerts feedback -->
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="bg-emerald-50 border border-emerald-100 text-emerald-600 px-4 py-3 rounded-2xl text-xs font-semibold flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4.5 h-4.5"></i>
+                    <span>@TempData["SuccessMessage"]</span>
+                </div>
+            }
+
+            <!-- Filters panel -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-4 flex-wrap">
+                <!-- Search -->
+                <form method="GET" action="/Admin/Dishes" class="relative w-80">
+                    <input type="hidden" name="categoryId" value="@ViewBag.SelectedCategoryId" />
+                    <input type="text" name="search" value="@ViewBag.SearchQuery" placeholder="Tìm tên món ăn..." 
+                           class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-slate-50" />
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                </form>
+
+                <!-- Category filter tags -->
+                <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                    <a href="/Admin/Dishes?search=@ViewBag.SearchQuery" 
+                       class="px-3.5 py-1.5 text-xs font-bold rounded-xl border transition-all whitespace-nowrap @(string.IsNullOrEmpty(ViewBag.SelectedCategoryId) ? "bg-[#FF6B35] text-white border-transparent" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50")">
+                        Tất Cả
+                    </a>
+                    @foreach (var cat in categories)
+                    {
+                        <a href="/Admin/Dishes?categoryId=@cat.Id&search=@ViewBag.SearchQuery" 
+                           class="px-3.5 py-1.5 text-xs font-bold rounded-xl border transition-all whitespace-nowrap @(ViewBag.SelectedCategoryId == cat.Id ? "bg-[#FF6B35] text-white border-transparent" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50")">
+                            @cat.Name
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <!-- Dishes Grid View -->
+            @if (!Model.Any())
+            {
+                <div class="bg-white rounded-3xl p-16 border border-slate-200 text-center space-y-3 max-w-md mx-auto mt-8 shadow-sm">
+                    <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-300 mx-auto">
+                        <i data-lucide="info" class="w-8 h-8"></i>
+                    </div>
+                    <h4 class="text-sm font-bold text-slate-700">Không tìm thấy món ăn</h4>
+                    <p class="text-xs text-slate-400">Không tìm thấy kết quả nào tương ứng với bộ lọc của bạn.</p>
+                </div>
+            }
+            else
+            {
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    @foreach (var dish in Model)
+                    {
+                        var categoryName = categories.FirstOrDefault(c => c.Id == dish.CategoryId)?.Name ?? "Món ăn";
+                        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
+                            
+                            <!-- Thumbnail with Category tag -->
+                            <div class="w-full h-40 bg-slate-100 overflow-hidden relative">
+                                <img src="@(string.IsNullOrEmpty(dish.Image) ? "/images/menu/default.webp" : dish.Image)" 
+                                     class="w-full h-full object-cover" 
+                                     alt="@dish.Name"
+                                     onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300'"/>
+                                
+                                <span class="absolute top-2 left-2 px-2 py-0.5 bg-slate-900/80 backdrop-blur-sm text-white text-[9px] font-bold rounded-lg uppercase tracking-wider">
+                                    @categoryName
+                                </span>
+                            </div>
+
+                            <!-- Content details -->
+                            <div class="p-4 flex-grow space-y-1">
+                                <h4 class="text-sm font-extrabold text-slate-800 line-clamp-1">@dish.Name</h4>
+                                <p class="text-[10px] text-slate-400 line-clamp-2 leading-relaxed font-light">@dish.Description</p>
+                                <span class="text-sm font-black text-[#FF6B35] block pt-1">@dish.Price.ToString("N0")₫</span>
+                                
+                                <!-- Sizes count -->
+                                <div class="text-[9px] text-slate-400 font-bold flex gap-3 pt-2">
+                                    <span>Kích cỡ: @(dish.Sizes?.Count ?? 0)</span>
+                                    <span>Toppings: @(dish.Toppings?.Count ?? 0)</span>
+                                </div>
+                            </div>
+
+                            <!-- Control actions -->
+                            <div class="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center gap-2">
+                                <a href="/Admin/EditDish/@dish.Id" 
+                                   class="flex-grow py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg transition-all text-center cursor-pointer flex justify-center items-center gap-1 border border-slate-200">
+                                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                                    <span>Sửa</span>
+                                </a>
+
+                                <form asp-action="DeleteDish" asp-route-id="@dish.Id" method="POST" class="inline" onsubmit="return confirmDelete(event, '@dish.Name')">
+                                    <button type="submit" 
+                                            class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors border border-rose-100 cursor-pointer">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </form>
+                            </div>
+
+                        </div>
+                    }
+                </div>
+            }
+
+        </main>
+    </div>
+
+    <!-- Confirmation scripting -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        lucide.createIcons();
+
+        function confirmDelete(event, dishName) {
+            event.preventDefault();
+            const form = event.target;
+            
+            Swal.fire({
+                title: 'Xóa món ăn?',
+                text: `Bạn có chắc chắn muốn xóa món '${dishName}' ra khỏi thực đơn?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#E74C3C',
+                cancelButtonColor: '#64748B',
+                confirmButtonText: 'Đồng Ý Xóa',
+                cancelButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+            return false;
+        }
+    </script>
+</body>
+</html>

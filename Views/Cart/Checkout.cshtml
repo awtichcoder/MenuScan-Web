@@ -1,0 +1,123 @@
+@model ActiveOrder
+@{
+    ViewData["Title"] = "Xác nhận đặt món";
+}
+
+<div class="px-4 py-4 space-y-4 flex-grow flex flex-col">
+
+    <!-- Header navigation -->
+    <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
+        <a href="/Cart" class="p-1.5 text-slate-500 hover:text-slate-800 rounded-full hover:bg-slate-50 transition-colors">
+            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        </a>
+        <h2 class="text-sm font-bold text-slate-700">Xác nhận đặt đơn</h2>
+    </div>
+
+    <!-- Thẻ xác nhận bàn -->
+    <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex gap-3 items-start">
+        <div class="p-2 bg-[#2ECC71]/10 rounded-full text-[#2ECC71]">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+        </div>
+        <div>
+            <h4 class="text-xs font-bold text-emerald-800">Đặt món trực tiếp tại Bàn @Model.TableNumber</h4>
+            <p class="text-[10px] text-emerald-600/90 font-light mt-0.5 leading-relaxed">Vui lòng kiểm tra kỹ số bàn của bạn. Nhân viên phục vụ sẽ đưa đồ ăn ra tận bàn theo đúng vị trí này.</p>
+        </div>
+    </div>
+
+    <!-- Danh sách tóm tắt món ăn -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100/50 space-y-3">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tóm Tắt Đơn Hàng</h3>
+        <div class="divide-y divide-slate-100">
+            @foreach (var item in Model.Items)
+            {
+                <div class="py-2 flex justify-between items-center text-xs">
+                    <div class="min-w-0 pr-2">
+                        <h5 class="font-bold text-slate-700 truncate">@item.Quantity × @item.DishName</h5>
+                        <p class="text-[10px] text-slate-400">@item.SelectedSize @(item.SelectedToppings.Any() ? " | " + string.Join(", ", item.SelectedToppings) : "")</p>
+                    </div>
+                    <span class="font-bold text-slate-600">@((item.Price * item.Quantity).ToString("N0"))₫</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Chọn hình thức thanh toán -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100/50 space-y-3">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Chọn Hình Thức Thanh Toán</h3>
+        
+        <div class="flex flex-col gap-2">
+            <!-- Cash Option -->
+            <label class="flex items-center justify-between p-3.5 border border-slate-200 rounded-xl cursor-pointer hover:border-[#FF6B35]/50 transition-all select-none pay-label">
+                <div class="flex items-center gap-3">
+                    <input type="radio" name="paymentType" value="Cash" checked 
+                           class="w-4 h-4 text-[#FF6B35] focus:ring-[#FF6B35] border-slate-300 pay-radio" />
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="banknote" class="w-5 h-5 text-emerald-500"></i>
+                        <div>
+                            <span class="text-xs font-bold text-slate-700 block">Thanh toán tại quầy thu ngân</span>
+                            <span class="text-[10px] text-slate-400">Thanh toán tiền mặt hoặc thẻ sau khi ăn xong</span>
+                        </div>
+                    </div>
+                </div>
+            </label>
+
+            <!-- Card / Bank Transfer Option -->
+            <label class="flex items-center justify-between p-3.5 border border-slate-200 rounded-xl cursor-pointer hover:border-[#FF6B35]/50 transition-all select-none pay-label">
+                <div class="flex items-center gap-3">
+                    <input type="radio" name="paymentType" value="BankTransfer" 
+                           class="w-4 h-4 text-[#FF6B35] focus:ring-[#FF6B35] border-slate-300 pay-radio" />
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="qr-code" class="w-5 h-5 text-blue-500"></i>
+                        <div>
+                            <span class="text-xs font-bold text-slate-700 block">Chuyển khoản trực tuyến</span>
+                            <span class="text-[10px] text-slate-400">Quét mã QR qua app ngân hàng tại quầy</span>
+                        </div>
+                    </div>
+                </div>
+            </label>
+        </div>
+    </div>
+
+    <!-- Hóa đơn tóm tắt -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100/50 space-y-3">
+        <div class="flex justify-between items-center text-xs text-slate-500">
+            <span>Tổng tiền món</span>
+            <span class="font-bold">@Model.SubTotal.ToString("N0")₫</span>
+        </div>
+        @if (Model.DiscountAmount > 0)
+        {
+            <div class="flex justify-between items-center text-xs text-emerald-600">
+                <span>Khuyến mãi áp dụng</span>
+                <span class="font-bold">-@Model.DiscountAmount.ToString("N0")₫</span>
+            </div>
+        }
+        <div class="border-t border-slate-100 pt-2.5 flex justify-between items-center text-sm">
+            <span class="font-bold text-slate-800">Thành tiền cần trả</span>
+            <span class="text-lg font-black text-[#FF6B35]">@Model.TotalAmount.ToString("N0")₫</span>
+        </div>
+    </div>
+
+    <form asp-controller="Cart" asp-action="SubmitOrder" method="POST" class="pt-4 pb-20">
+        <button type="submit" class="w-full py-4 bg-[#FF6B35] hover:bg-[#FF8552] text-white font-bold rounded-xl shadow-lg shadow-orange-500/20 active:scale-95 transition-all text-center text-sm">
+            Xác Nhận & Gửi Đơn Vào Bếp
+        </button>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        // Highlighting logic for payment labels
+        function highlightPayLabels() {
+            document.querySelectorAll('.pay-label').forEach(label => {
+                const radio = label.querySelector('input');
+                if (radio.checked) {
+                    label.classList.add('border-[#FF6B35]', 'bg-orange-50/20');
+                } else {
+                    label.classList.remove('border-[#FF6B35]', 'bg-orange-50/20');
+                }
+            });
+        }
+        document.querySelectorAll('.pay-radio').forEach(r => r.addEventListener('change', highlightPayLabels));
+        highlightPayLabels(); // Initial run
+    </script>
+}

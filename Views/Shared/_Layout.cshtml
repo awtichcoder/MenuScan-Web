@@ -1,137 +1,149 @@
-﻿<!DOCTYPE html>
-<html lang="en">
-
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+@{
+    var tableNumber = HttpContextAccessor.HttpContext?.Session.GetString("TableNumber");
+}
+<!DOCTYPE html>
+<html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] | Hadilao</title>
-    <link rel="shortcut icon" href="/images/favicon/favicon.webp?v=2" type="image/x-icon">
+    <title>@ViewData["Title"] - MenuScan</title>
+    
+    <!-- Google Fonts: Poppins & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
     <link rel="stylesheet" href="~/css/site.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    
+    <style>
+        body {
+            font-family: 'Poppins', 'Inter', sans-serif;
+            background-color: #F1F5F9;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
 </head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center">
 
-<body>
-    <div id="root">
-        <div class="content-wrapper max-w-screen-2xl mx-auto text-base">
-            <header id="main-header"
-                    class="fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-transparent text-white ">
-                <nav class="relative max-w-[1440px] mx-auto px-6 h-20 flex justify-between items-center">
+    <!-- Khung Màn Hình Điện Thoại Căn Giữa (390px - 430px) -->
+    <div class="w-full max-w-[430px] min-h-screen bg-slate-50 shadow-2xl relative flex flex-col justify-between overflow-x-hidden border-x border-slate-200/50 pb-20">
+        
+        <!-- Thanh Đầu Trang Sticky -->
+        <header class="sticky top-0 z-50 flex items-center justify-between px-4 py-3 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-[#FF6B35] flex items-center justify-center text-white font-black text-sm">MS</div>
+                <div>
+                    <h1 class="text-sm font-bold text-slate-800 leading-none">HAIDILAO</h1>
+                    @if (!string.IsNullOrEmpty(tableNumber))
+                    {
+                        <span class="inline-flex items-center text-xs font-semibold text-[#FF6B35] mt-0.5">Bàn @tableNumber</span>
+                    }
+                    else
+                    {
+                        <span class="inline-flex items-center text-xs font-semibold text-slate-400 mt-0.5">Chưa chọn bàn</span>
+                    }
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                @if (!string.IsNullOrEmpty(tableNumber))
+                {
+                    <button onclick="triggerCallStaff()" class="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-[#E74C3C] text-xs font-bold rounded-full transition-colors border border-red-100">
+                        <i data-lucide="bell-ring" class="w-3.5 h-3.5"></i>
+                        <span>Gọi Nhân Viên</span>
+                    </button>
+                }
+                
+                <a href="/Order/Profile" class="p-1.5 text-slate-600 hover:text-slate-900 rounded-full hover:bg-slate-50 transition-colors">
+                    <i data-lucide="user" class="w-5 h-5"></i>
+                </a>
+            </div>
+        </header>
 
-                    <a href="/" class="flex items-center gap-2 group z-10">
-                        <img id="logo" src="~/images/logo/logo.webp" alt="Logo"
-                             class="w-auto h-10 object-contain brightness-0 invert ">
-                    </a>
+        <!-- Nội dung chính -->
+        <main class="flex-grow flex flex-col">
+            @RenderBody()
+        </main>
 
-                    <ul class="hidden lg:flex items-center gap-6 xl:gap-8 font-bold text-[16px] h-full">
-                        <li><a href="#" class="ct-menu">Trang chủ</a></li>
-                        <li><a href="#" class="ct-menu">Thực đơn</a></li>
-                        <li><a href="#" class="ct-menu">Chi nhánh</a></li>
-                        <li><a href="#" class="ct-menu">Khuyến mãi</a></li>
-                        <li><a href="#" class="ct-menu">Tuyển dụng</a></li>
+        <!-- Thanh Điều Hướng Dưới Cùng (Fixed cho giao diện khách hàng) -->
+        <nav class="absolute bottom-0 left-0 w-full z-40 grid grid-cols-4 bg-white border-t border-slate-100 py-2.5 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+            <a href="/Home/Menu" class="flex flex-col items-center justify-center @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["Action"]?.ToString() == "Menu" ? "text-[#FF6B35]" : "text-slate-400 hover:text-[#FF6B35]")">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold mt-1">Trang Chủ</span>
+            </a>
+            
+            <a href="/Cart" class="flex flex-col items-center justify-center relative @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Cart" ? "text-[#FF6B35]" : "text-slate-400 hover:text-[#FF6B35]")">
+                <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold mt-1">Giỏ Hàng</span>
+            </a>
+            
+            <a href="/Order/Tracking" class="flex flex-col items-center justify-center @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Order" && ViewContext.RouteData.Values["Action"]?.ToString() == "Tracking" ? "text-[#FF6B35]" : "text-slate-400 hover:text-[#FF6B35]")">
+                <i data-lucide="package" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold mt-1">Theo Dõi</span>
+            </a>
+            
+            <a href="/Order/Profile" class="flex flex-col items-center justify-center @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Order" && ViewContext.RouteData.Values["Action"]?.ToString() == "Profile" ? "text-[#FF6B35]" : "text-slate-400 hover:text-[#FF6B35]")">
+                <i data-lucide="history" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold mt-1">Lịch Sử</span>
+            </a>
+        </nav>
 
-                        <li class="relative group h-full flex items-center cursor-pointer">
-                            <a class="ct-menu flex items-center gap-1.5 py-8">
-                                Về Haidilao <i
-                                class="fa-solid fa-chevron-down text-[11px] mt-0.5 group-hover:rotate-180 transition-transform duration-300"></i>
-                            </a>
+    </div>
 
-                            <div class="absolute top-[80px] left-0 bg-white text-black min-w-[200px] shadow-lg rounded-sm py-2 
-                                invisible opacity-0 translate-y-3 
-                                group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 
-                                transition-all duration-300 ease-out">
-                                <a href="#"
-                                   class="block px-6 py-2.5 hover:text-[#E60012] font-semibold transition-colors">Về
-                                    Haidilao</a>
-                                    <a href="#"
-                                       class="block px-6 py-2.5 hover:text-[#E60012] font-semibold transition-colors">Thành
-                                        viên</a>
-                                        <a href="#"
-                                           class="block px-6 py-2.5 hover:text-[#E60012] font-semibold transition-colors">Liên
-                                            hệ</a>
-                                        </div>
-                                    </li>
-                                </ul>
-
-                                <div class="z-10 flex items-center gap-4">
-                                    <a href="#" id="booking-btn"
-                                       class="px-6 py-2 rounded-full border border-current font-bold transition-all duration-300 hover:bg-white hover:text-black">
-                                        Đặt bàn
-                                    </a>
-
-                                    <button class="lg:hidden text-2xl ml-2">
-                                        <i class="fa-solid fa-bars"></i>
-                                    </button>
-                                </div>
-
-                            </nav>
-                        </header>
-                        <main class=" ">
-                            @RenderBody()
-                        </main>
-                        <footer class=" w-[95%] xl:w-[65%] mx-auto pb-24 text-gray-500 text-sm mt-14 ">
-                            <div class=" flex flex-col md:flex-row text-center md:text-left gap-8 ">
-                                <div class=" basis-2/6">
-                                    <div class="font-bold text-3xl mb-4 text-gray-800">
-                                        Hadilao
-                                    </div>
-                                    <div class=" mb-8 md:mb-20">
-                                        Delivering the ultimate sneaker journey since 2026. From sole geeks to the true heads
-                                    </div>
-                                    <div class="text-gray-400 hover:text-light-coffee">
-                                        Hadilao Inc. © 2026
-                                    </div>
-                                </div>
-                                <div class="basis-1/6">
-                                    <div class="uppercase font-semibold tracking-wider text-gray-600 mb-4 "> Menu</div>
-                                    <div class="flex flex-col gap-3">
-                                        <div class=""><a href="" class="hover:text-light-coffee">Home</a></div>
-                                        <div class=""><a href="" class="hover:text-light-coffee">Our Products</a></div>
-                                        <div class=""><a href="" class="hover:text-light-coffee">About</a></div>
-                                        <div class=""><a href="" class="hover:text-light-coffee">Contact</a></div>
-                                        <div class=""><a href="" class="hover:text-light-coffee">Styleleguide</a></div>
-                                        <div class=""><a href="https://github.com/awtichcoder" target="_blank"
-                                                             class="hover:text-light-coffee">Hadilao</a></div>
-                                        </div>
-                                    </div>
-                                    <div class="basis-1/6">
-                                        <div class="uppercase font-semibold tracking-wider text-gray-600 mb-4"> Follow Us</div>
-                                        <div class="flex flex-col gap-3">
-                                            <div class=""><a href="" class="hover:text-light-coffee">Facebook</a></div>
-                                            <div class=""><a href="" class="hover:text-light-coffee">Instagram</a></div>
-                                            <div class=""><a href="" class="hover:text-light-coffee">Github</a></div>
-                                            <div class=""><a href="" class="hover:text-light-coffee">Linkedin</a></div>
-
-                                        </div>
-                                    </div>
-                                    <div class="basis-2/6">
-                                        <div>
-                                            <div class="uppercase font-semibold tracking-wider text-gray-600 mb-4"> Contact Us</div>
-                                            <div class=" mb-4"> We&apos;re Always Happy to Help</div>
-                                            <div class="mb-16 text-gray-800 text-2xl font-medium tracking-wider"><a
-                                                href="mailto:hadilao@gmail.com"
-                                                class=" hover:text-light-coffee">Hadilao@gmail.com</a>
-                                            </div>
-                                            <div class=""> <a href="" target="_blank"
-                                                              class="hover:text-light-coffee text-gray-400">Powered by
-                                                TeamAdidop Author</a></div>
-                                            </div>
-
-
-                                        </div>
-                                    </div>
-                                </footer>
-                            </div> @* End content-wrapper *@
-                        </div> @* End #root *@
-
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
+    <script>
+        // Khởi tạo Lucide Icons
+        lucide.createIcons();
 
-    
+        // AJAX Gọi nhân viên
+        async function triggerCallStaff() {
+            try {
+                const response = await fetch('/Order/CallStaff', { method: 'POST' });
+                const result = await response.json();
+                if (result.success) {
+                    Swal.fire({
+                        title: 'Đã gọi nhân viên!',
+                        text: 'Yêu cầu của bạn đã được gửi, nhân viên sẽ có mặt ngay.',
+                        icon: 'success',
+                        confirmButtonColor: '#FF6B35',
+                        timer: 3000
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Thất bại',
+                        text: result.message,
+                        icon: 'error',
+                        confirmButtonColor: '#FF6B35'
+                    });
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire({
+                    title: 'Lỗi',
+                    text: 'Không thể kết nối đến máy chủ.',
+                    icon: 'error',
+                    confirmButtonColor: '#FF6B35'
+                });
+            }
+        }
+    </script>
 
-    
-
-   
-                        <script type="module" src="~/js/site.js" asp-append-version="true"></script>
-                        @await RenderSectionAsync("Scripts", required: false)
-                    </body>
-
-                </html>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

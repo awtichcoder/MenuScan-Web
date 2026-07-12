@@ -1,10 +1,83 @@
-﻿@{
-    ViewData["Title"] = "Haidilao Vietnam - Lẩu Haidilao chính hãng";
-    Layout = "~/Views/Shared/_Layout.cshtml";
-
+@{
+    ViewData["Title"] = "Chào mừng - Hadilao QR Menu";
+    Layout = null; // Canvas trống cho màn hình chào mừng
 }
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chào mừng - MenuScan</title>
+    
+    <!-- Google Fonts: Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="~/css/site.css" />
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center">
 
-<div class="relative w-full">
-    <img src="~/images/media/bg-hero.webp" alt="Hero Image" class="w-full h-auto object-cover">
-</div>
-<h1 class="ct-menu">HEHE tới mi làm tao ngẩu </h1>
+    <!-- Khung Màn Hình Căn Giữa (390px - 430px) -->
+    <div class="w-full max-w-[430px] min-h-screen bg-gradient-to-br from-[#FF6B35] via-[#FF8552] to-[#FF9F1C] shadow-2xl relative flex flex-col justify-between p-6 overflow-hidden">
+        
+        <!-- Các vòng tròn trang trí -->
+        <div class="absolute -top-12 -left-12 w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
+        <div class="absolute top-1/4 -right-12 w-40 h-40 bg-white/10 rounded-full blur-xl"></div>
+
+        <div></div>
+
+        <!-- Nội dung chính -->
+        <div class="flex flex-col items-center text-center z-10">
+            <!-- Brand Logo -->
+            <div class="w-28 h-28 rounded-full bg-white flex items-center justify-center shadow-2xl animate-pulse">
+                <i data-lucide="utensils-crosskey" class="w-12 h-12 text-[#FF6B35]"></i>
+            </div>
+            
+            <h1 class="text-white text-3xl font-black tracking-wider mt-6 font-sans">HAIDILAO</h1>
+            <p class="text-white/80 text-xs font-semibold uppercase tracking-widest mt-1">Hệ Thống Gọi Món Bằng QR Code</p>
+            
+            <!-- Thẻ chọn bàn giả lập để kiểm thử -->
+            <div class="w-full mt-10 bg-white/95 backdrop-blur-md rounded-2xl p-5 shadow-xl text-slate-800">
+                <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-1.5 justify-center">
+                    <i data-lucide="scan" class="w-4 h-4 text-[#FF6B35]"></i>
+                    Chọn Bàn Để Thử Nghiệm
+                </h3>
+                
+                <form asp-action="SetTable" method="POST">
+                    <div class="grid grid-cols-3 gap-2 mb-4">
+                        @for (int i = 1; i <= 6; i++)
+                        {
+                            <button type="submit" name="tableNumber" value="@(i.ToString("D2"))" 
+                                    class="py-2.5 bg-slate-50 hover:bg-[#FF6B35]/10 hover:text-[#FF6B35] hover:border-[#FF6B35] border border-slate-200 text-sm font-bold text-slate-600 rounded-xl transition-all active:scale-95">
+                                Bàn @i
+                            </button>
+                        }
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <input type="text" name="tableNumber" placeholder="Hoặc nhập số bàn khác..." 
+                               class="flex-grow px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#FF6B35] focus:border-[#FF6B35]" required />
+                        <button type="submit" class="px-4 py-2 bg-[#FF6B35] text-white text-xs font-bold rounded-xl shadow-md shadow-orange-500/20 active:scale-95 transition-all">
+                            Vào
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bản quyền chân trang -->
+        <div class="text-center text-white/50 text-[10px] font-semibold tracking-wider z-10">
+            HỖ TRỢ BỞI MENUSCAN QR © 2026
+        </div>
+
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

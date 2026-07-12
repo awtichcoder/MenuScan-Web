@@ -1,0 +1,78 @@
+@model IEnumerable<MenuQr.Models.Sql.Order>
+@{
+    ViewData["Title"] = "Lịch sử đặt món";
+}
+
+<div class="px-4 py-4 space-y-4 flex-grow flex flex-col">
+
+    <!-- Header navigation -->
+    <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
+        <a href="/Home/Menu" class="p-1.5 text-slate-500 hover:text-slate-800 rounded-full hover:bg-slate-50 transition-colors">
+            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        </a>
+        <h2 class="text-sm font-bold text-slate-700">Lịch Sử Sử Dụng Bàn</h2>
+    </div>
+
+    <!-- Active Table Information Card -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100/50 space-y-3 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-full bg-[#FF6B35]/10 text-[#FF6B35] flex items-center justify-center">
+                <i data-lucide="tablet" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-slate-700">Đang Sử Dụng</h4>
+                <p class="text-xs text-slate-400 font-medium">Bàn số: <span class="text-[#FF6B35] font-extrabold">@ViewBag.TableNumber</span></p>
+            </div>
+        </div>
+        
+        <a href="/Home/ClearTable" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold rounded-lg transition-all active:scale-95 border border-slate-200">
+            Chuyển Bàn
+        </a>
+    </div>
+
+    <!-- History Header -->
+    <div class="space-y-3 pb-20">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Hóa Đơn Đã Hoàn Thành</h3>
+
+        @if (Model == null || !Model.Any())
+        {
+            <div class="bg-white p-8 text-center rounded-2xl border border-slate-100 space-y-2">
+                <i data-lucide="history" class="w-10 h-10 text-slate-200 mx-auto"></i>
+                <h4 class="text-xs font-bold text-slate-700">Chưa có lịch sử đặt món</h4>
+                <p class="text-[10px] text-slate-400 font-light leading-relaxed">Sau khi bạn dùng bữa xong và thanh toán hóa đơn tại quầy, thông tin các hóa đơn cũ sẽ xuất hiện ở đây!</p>
+            </div>
+        }
+        else
+        {
+            <div class="space-y-3">
+                @foreach (var order in Model)
+                {
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100/50 space-y-3">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-extrabold text-slate-800">Đơn hàng #@order.Id</span>
+                            <span class="text-slate-400 font-medium">@order.OrderDate.ToString("yyyy-MM-dd HH:mm")</span>
+                        </div>
+                        
+                        <!-- List of details -->
+                        <div class="divide-y divide-slate-50 text-[11px] text-slate-500 space-y-1">
+                            @foreach (var detail in order.OrderDetails)
+                            {
+                                <div class="py-1 flex justify-between">
+                                    <span>@detail.Quantity × @detail.DishName</span>
+                                    <span class="font-bold text-slate-700">@((detail.BasePrice * detail.Quantity).ToString("N0"))₫</span>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Subtotal and Final Paid Breakdown -->
+                        <div class="border-t border-slate-100 pt-2.5 flex justify-between items-center text-xs font-bold">
+                            <span class="text-slate-500">Đã thanh toán</span>
+                            <span class="text-emerald-500">@order.TotalAmount.ToString("N0")₫</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+</div>
