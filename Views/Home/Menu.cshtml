@@ -1,0 +1,310 @@
+@* Views/Home/Menu.cshtml *@
+@model MenuQr.Models.MenuViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = Model.CurrentCategoryName;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+</style>
+
+<!-- ========================================== -->
+<!-- 1. THANH TAB DANH MỤC (TRƯỢT NGANG) -->
+<!-- ========================================== -->
+<div
+    class="sticky top-[56px] z-40 bg-white border-b shadow-sm py-3 px-4 flex gap-3 overflow-x-auto hide-scrollbar whitespace-nowrap items-center">
+    <a href="/Home/Menu?id=all&tableId=@ViewBag.TableId" class="px-5 py-2 rounded-full border border-gray-300 font-medium text-sm transition-colors duration-200 
+        @(Model.CurrentCategoryId == "all" ? "bg-black text-white border-black" : "bg-white text-gray-700")">
+        Đặt đề cử
+    </a>
+    @foreach (var cat in Model.Categories)
+    {
+        <a href="/Home/Menu?id=@cat.Id&tableId=@ViewBag.TableId" class="px-5 py-2 rounded-full border border-gray-300 font-medium text-sm transition-colors duration-200 
+            @(Model.CurrentCategoryId == cat.Id ? "bg-black text-white border-black" : "bg-white text-gray-700")">
+            @cat.Name
+        </a>
+    }
+</div>
+
+<!-- ========================================== -->
+<!-- 2. DANH SÁCH SẢN PHẨM -->
+<!-- ========================================== -->
+<div class="p-4 bg-white pb-24">
+    <h2 class="text-xl font-bold text-gray-800 mb-6">@Model.CurrentCategoryName</h2>
+
+    <div class="flex flex-col gap-6">
+        @if (Model.Dishes != null && Model.Dishes.Any())
+        {
+            foreach (var dish in Model.Dishes)
+            {
+                <div class="flex items-center gap-4 bg-white relative pb-4 border-b border-gray-100 last:border-0 cursor-pointer"
+                     onclick="openDishModal('@dish.Id')">
+                    <div class="w-24 h-24 flex-shrink-0">
+                        <img src="@(string.IsNullOrEmpty(dish.ImageUrl) ? "https://via.placeholder.com/150" : dish.ImageUrl)"
+                             alt="@dish.Name" class="w-full h-full object-cover rounded-full border border-gray-100 shadow-sm" />
+                    </div>
+                    <div class="flex-1 pr-10">
+                        <h3 class="font-bold text-gray-900 text-base leading-tight mb-1">@dish.Name</h3>
+                        <p class="text-gray-800 font-semibold text-sm">@string.Format("{0:N0}", dish.BasePrice) VNĐ</p>
+                    </div>
+                    <button
+                        class="absolute bottom-4 right-0 w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center text-xl font-light text-gray-600 hover:bg-gray-100">
+                        +
+                    </button>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-center text-gray-500 py-10">
+                Chưa có món ăn nào trong danh mục này.
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 3. MODAL CHI TIẾT MÓN ĂN (BOTTOM SHEET) -->
+<!-- ========================================== -->
+<div id="modalOverlay" class="fixed inset-0 bg-black/60 z-[60] hidden opacity-0 transition-opacity duration-300"
+     onclick="closeDishModal()"></div>
+
+<div id="dishModal"
+     class="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[70] transform translate-y-full transition-transform duration-300 flex flex-col"
+     style="max-height: 90vh;">
+
+    <button onclick="closeDishModal()"
+            class="absolute top-4 left-4 z-10 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center text-gray-800 font-bold shadow cursor-pointer">
+        ✕
+    </button>
+
+    <div class="overflow-y-auto hide-scrollbar flex-1 pb-24">
+        <div class="w-full h-64 bg-gray-100 relative">
+            <img id="modalImage" src="" class="w-full h-full object-cover" alt="Dish Image">
+            <div
+                class="absolute -bottom-5 left-4 bg-black text-white rounded-full flex items-center px-4 py-2 shadow-lg">
+                <button onclick="changeQty(-1)" class="text-xl px-2 text-gray-400 hover:text-white">−</button>
+                <span id="modalQty" class="font-bold text-orange-400 mx-4 text-lg">1</span>
+                <button onclick="changeQty(1)" class="text-xl px-2 text-gray-400 hover:text-white">+</button>
+            </div>
+        </div>
+
+        <div class="p-5 mt-6">
+            <h2 id="modalPrice" class="text-xl font-bold text-gray-900 mb-2">0 VNĐ</h2>
+            <h1 id="modalName" class="text-2xl font-bold text-gray-900 leading-tight mb-4">Tên món</h1>
+            <hr class="border-gray-300 border-2 my-4" />
+            <div id="modalOptionsContainer" class="flex flex-col gap-6"></div>
+
+            <div class="mt-6 border-t pt-6">
+                <h3 class="font-bold text-gray-900 text-lg mb-3">Ghi chú</h3>
+                <div class="relative">
+                    <textarea id="dishNote" rows="3" maxlength="200"
+                              placeholder="Thêm ghi chú cho nhà hàng (VD: ít cay, không hành...)"
+                              class="w-full border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-gray-50"
+                              oninput="updateNoteCount()"></textarea>
+                    <span id="noteCount"
+                          class="absolute bottom-3 right-3 text-xs text-gray-400 font-medium">0/200</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ĐÃ THÊM ONCLICK="addToCart()" VÀO ĐÂY -->
+    <div class="absolute bottom-0 left-0 right-0 bg-white p-4 border-t shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.1)]">
+        <button id="btnAddToCart" onclick="addToCart()"
+                class="w-full bg-[#F3C178] text-black font-bold py-4 rounded-xl text-lg flex justify-between px-6 items-center transition-colors">
+            <span>Thêm vào giỏ</span>
+            <span id="modalTotalPrice">0 VNĐ</span>
+        </button>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 4. JAVASCRIPT XỬ LÝ NGHIỆP VỤ -->
+<!-- ========================================== -->
+<script>
+    const dishesData = @Html.Raw(JsonSerializer.Serialize(Model.Dishes, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+
+    let currentDish = null;
+    let quantity = 1;
+    let basePrice = 0;
+
+    function openDishModal(dishId) {
+        currentDish = dishesData.find(d => d.id === dishId || d.Id === dishId);
+        if (!currentDish) return;
+
+        quantity = 1;
+        basePrice = Number(currentDish.basePrice ?? currentDish.BasePrice ?? 0);
+
+        document.getElementById('modalQty').innerText = quantity;
+        document.getElementById('dishNote').value = '';
+        document.getElementById('noteCount').innerText = '0/200';
+        document.getElementById('modalName').innerText = currentDish.name ?? currentDish.Name;
+        document.getElementById('modalPrice').innerText = formatCurrency(basePrice);
+        document.getElementById('modalImage').src = (currentDish.imageUrl ?? currentDish.ImageUrl) || 'https://via.placeholder.com/400';
+
+        const specs = currentDish.specifications ?? currentDish.Specifications ?? [];
+        const optionsContainer = document.getElementById('modalOptionsContainer');
+        optionsContainer.innerHTML = '';
+
+        specs.forEach((spec, specIndex) => {
+            const specName = spec.specName ?? spec.SpecName;
+            const isRequired = spec.isRequired ?? spec.IsRequired;
+            const maxChoices = spec.maxChoices ?? spec.MaxChoices;
+
+            let specHtml = `
+                <div>
+                    <div class="flex justify-between items-baseline mb-3">
+                        <h3 class="font-bold text-gray-900 text-lg">${specName}</h3>
+                        ${isRequired ? '<span class="text-xs text-gray-500">* Bắt buộc</span>' : ''}
+                    </div>
+            `;
+
+            const options = spec.options ?? spec.Options ?? [];
+            const inputType = maxChoices === 1 ? 'radio' : 'checkbox';
+            const inputName = `spec_${specIndex}`;
+
+            options.forEach((opt, optIndex) => {
+                const optName = opt.name ?? opt.Name;
+                const extraPrice = Number(opt.extraPrice ?? opt.ExtraPrice ?? 0);
+                const priceText = extraPrice > 0 ? `+ ${formatCurrency(extraPrice)}` : '+ 0 VNĐ';
+                const isChecked = (inputType === 'radio' && optIndex === 0 && isRequired) ? 'checked' : '';
+
+                specHtml += `
+                    <label class="flex items-center justify-between py-3 border-b border-gray-100 last:border-0 cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <input type="${inputType}" name="${inputName}" value="${extraPrice}" data-optname="${optName}" class="w-5 h-5 text-orange-500 accent-orange-500" onchange="calculateTotal()" ${isChecked}>
+                            <span class="text-gray-800 text-lg">${optName}</span>
+                        </div>
+                        <span class="text-gray-600">${priceText}</span>
+                    </label>
+                `;
+            });
+            specHtml += `</div>`;
+            optionsContainer.innerHTML += specHtml;
+        });
+
+        calculateTotal();
+
+        document.getElementById('modalOverlay').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => {
+            document.getElementById('modalOverlay').classList.remove('opacity-0');
+            document.getElementById('dishModal').classList.remove('translate-y-full');
+        }, 10);
+    }
+
+    function closeDishModal() {
+        document.getElementById('modalOverlay').classList.add('opacity-0');
+        document.getElementById('dishModal').classList.add('translate-y-full');
+        document.body.style.overflow = '';
+        setTimeout(() => {
+            document.getElementById('modalOverlay').classList.add('hidden');
+        }, 300);
+    }
+
+    function changeQty(delta) {
+        if (quantity + delta >= 1) {
+            quantity += delta;
+            document.getElementById('modalQty').innerText = quantity;
+            calculateTotal();
+        }
+    }
+
+    function calculateTotal() {
+        let optionsPrice = 0;
+        const inputs = document.querySelectorAll('#modalOptionsContainer input:checked');
+        inputs.forEach(input => {
+            optionsPrice += Number(input.value || 0);
+        });
+
+        const total = (basePrice + optionsPrice) * quantity;
+        document.getElementById('modalTotalPrice').innerText = formatCurrency(total);
+        return total; // Trả về số nguyên để lưu giỏ hàng
+    }
+
+    function updateNoteCount() {
+        const noteInput = document.getElementById('dishNote');
+        const countSpan = document.getElementById('noteCount');
+        countSpan.innerText = `${noteInput.value.length}/200`;
+    }
+
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('vi-VN').format(amount) + ' VNĐ';
+    }
+
+    /// ==========================================
+    // HÀM THÊM VÀO GIỎ HÀNG (LƯU TRỰC TIẾP LÊN MONGODB)
+    // ==========================================
+    async function addToCart() {
+        if (!currentDish) return;
+
+        // 1. Tính toán Topping
+        const selectedOptions = [];
+        let extraPriceTotal = 0;
+
+        const inputs = document.querySelectorAll('#modalOptionsContainer input:checked');
+        inputs.forEach(input => {
+            let price = Number(input.value || 0);
+            extraPriceTotal += price;
+            selectedOptions.push({
+                specName: "Tùy chọn",
+                name: input.getAttribute('data-optname'),
+                extraPrice: price
+            });
+        });
+
+        // 2. Đóng gói dữ liệu gửi xuống Backend
+        const requestData = {
+            tableNumber: '@ViewBag.TableId', // Lấy mã bàn từ ViewBag
+            item: {
+                cartItemId: 'item_' + new Date().getTime(),
+                dishId: currentDish.id ?? currentDish.Id,
+                dishName: currentDish.name ?? currentDish.Name,
+                imageUrl: (currentDish.imageUrl ?? currentDish.ImageUrl) || '',
+                quantity: quantity,
+                basePrice: basePrice,
+                finalPrice: basePrice + extraPriceTotal,
+                selectedOptions: selectedOptions,
+                note: document.getElementById('dishNote').value.trim(),
+                itemStatus: 'Pending'
+            }
+        };
+
+        // 3. GỌI API LƯU VÀO MONGODB
+        try {
+            const response = await fetch('/Order/AddItemToMongo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestData)
+            });
+
+            if (response.ok) {
+                closeDishModal(); // Đóng popup món ăn
+
+                // Gọi hàm bên _Layout.cshtml để tải lại giỏ hàng từ MongoDB
+                if (typeof loadCartFromDB === 'function') {
+                    loadCartFromDB();
+                }
+
+                alert(`Đã lưu ${quantity} phần ${requestData.item.dishName} vào giỏ hàng trên hệ thống!`);
+            } else {
+                alert("Lỗi: Không thể lưu vào hệ thống, vui lòng thử lại!");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Lỗi kết nối máy chủ MongoDB!");
+        }
+    }
+
+    
+</script>
