@@ -21,5 +21,8 @@ namespace MenuQr.Areas.Admin.Models
 
         [BsonElement("is_active")]
         public bool IsActive { get; set; } = true;
+        // BỔ SUNG THUỘC TÍNH NÀY
+        [BsonElement("image_url")]
+        public string? ImageUrl { get; set; }
     }
 }

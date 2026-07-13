@@ -1,23 +1,19 @@
 using MongoDB.Driver;
 using CloudinaryDotNet;
+using MenuQr.Data;
+using Microsoft.EntityFrameworkCore; // Nhớ thêm using này để dùng được UseSqlServer
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 // 1. SETUP MONGODB ATLAS
-
-
-// Đăng ký Class MongoDbSettings đọc dữ liệu từ appsettings.json
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDBSettings"));
 
-// Đăng ký IMongoClient dưới dạng Singleton (toàn ứng dụng dùng chung 1 kết nối duy nhất)
 builder.Services.AddSingleton<IMongoClient>(sp =>
 {
     var connectionString = builder.Configuration.GetValue<string>("MongoDBSettings:ConnectionString");
     return new MongoClient(connectionString);
 });
 
-// Đăng ký IMongoDatabase để các Controller (như DishController) có thể nhận được qua Constructor
 builder.Services.AddScoped<IMongoDatabase>(sp => 
 {
     var client = sp.GetRequiredService<IMongoClient>();
@@ -26,14 +22,9 @@ builder.Services.AddScoped<IMongoDatabase>(sp =>
 });
 
 
-
 // 2. SETUP CLOUDINARY
-
-
-// Đăng ký Class CloudinarySettings để xài Options Pattern
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 
-// Đăng ký đối tượng Cloudinary để sau này inject vào Controller/Service là xài luôn
 builder.Services.AddScoped(sp =>
 {
     var config = builder.Configuration.GetSection("CloudinarySettings").Get<CloudinarySettings>();
@@ -42,22 +33,27 @@ builder.Services.AddScoped(sp =>
 });
 
 
-
 // 3. SETUP VNPAY
-
-
-// Đăng ký Class VnPaySettings để khi cần lấy dữ liệu TmnCode hay HashSecret thì gọi ra
 builder.Services.Configure<VnPaySettings>(builder.Configuration.GetSection("VnPay"));
 
-// Add services to the container.
 builder.Services.AddControllersWithViews();
 
+
+// =======================================================
+// SETUP SQL SERVER (PHẢI NẰM TRƯỚC BUILDER.BUILD)
+// =======================================================
+var sqlConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(sqlConnectionString));
+
+
+// =======================================================
+// LỆNH BUILD BẮT BUỘC NẰM Ở ĐÂY
+// =======================================================
 var app = builder.Build();
 
 
 // 4. CONFIGURE THE HTTP REQUEST PIPELINE
-
-
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");

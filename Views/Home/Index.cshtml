@@ -1,10 +1,47 @@
-﻿@{
-    ViewData["Title"] = "Haidilao Vietnam - Lẩu Haidilao chính hãng";
+﻿@model List<MenuQr.Areas.Admin.Models.Category>
+@{
+    ViewData["Title"] = "Trang chủ - Thực đơn";
     Layout = "~/Views/Shared/_Layout.cshtml";
-
 }
 
+<!-- Banner Hero -->
 <div class="relative w-full">
-    <img src="~/images/media/bg-hero.webp" alt="Hero Image" class="w-full h-auto object-cover">
+    <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1000&auto=format&fit=crop"
+         alt="Hero Image" class="w-full h-48 object-cover">
 </div>
-<h1 class="ct-menu">HEHE tới mi làm tao ngẩu </h1>
+
+<!-- Main Content: Category Grid -->
+<main class="p-4">
+    <div class="grid grid-cols-2 gap-3">
+
+        <!-- CARD 1: ĐỀ CỬ (Đã sửa link thành /Home/Menu) -->
+        <a href="/Home/Menu?id=all&tableId=@ViewBag.TableId"
+           class="relative block rounded-lg overflow-hidden shadow-sm aspect-square bg-gray-200">
+            <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400&auto=format&fit=crop"
+                 alt="Đề cử" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+            <h3 class="absolute bottom-2 left-3 right-3 text-white font-bold text-lg leading-tight">
+                Đề cử
+            </h3>
+        </a>
+
+        <!-- CARD TỪ 2 TRỞ ĐI (Đã sửa link thành /Home/Menu) -->
+        @if (Model != null && Model.Any())
+        {
+            foreach (var category in Model)
+            {
+                <a href="/Home/Menu?id=@category.Id&tableId=@ViewBag.TableId"
+                   class="relative block rounded-lg overflow-hidden shadow-sm aspect-square bg-gray-200">
+                    <img src="@(string.IsNullOrEmpty(category.ImageUrl) ? "https://via.placeholder.com/300" : category.ImageUrl)"
+                         alt="@category.Name" class="w-full h-full object-cover" />
+
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+
+                    <h3 class="absolute bottom-2 left-3 right-3 text-white font-bold text-lg leading-tight">
+                        @category.Name
+                    </h3>
+                </a>
+            }
+        }
+    </div>
+</main>
