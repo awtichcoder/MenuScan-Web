@@ -25,6 +25,10 @@ namespace MenuQr.Models
         [BsonElement("updated_at")]
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
+        // ĐÂY NÈ: Thêm trường PaidAt để hết báo lỗi đỏ ở Controller 👇
+        [BsonElement("paid_at")]
+        public DateTime? PaidAt { get; set; }
+
         [BsonElement("items")]
         public List<ActiveOrderItem> Items { get; set; } = new List<ActiveOrderItem>();
     }
