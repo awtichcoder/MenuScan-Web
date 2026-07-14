@@ -44,18 +44,22 @@
     <div class="flex flex-col gap-6">
         @if (Model.Dishes != null && Model.Dishes.Any())
         {
-            foreach (var dish in Model.Dishes)
+            @foreach (var dish in Model.Dishes)
             {
-                <div class="flex items-center gap-4 bg-white relative pb-4 border-b border-gray-100 last:border-0 cursor-pointer"
+                <!-- THÊM CHỮ "dish-item" VÀO ĐẦU DANH SÁCH CLASS Ở ĐÂY 👇 -->
+                <div class="dish-item flex items-center gap-4 bg-white relative pb-4 border-b border-gray-100 last:border-0 cursor-pointer"
                      onclick="openDishModal('@dish.Id')">
+
                     <div class="w-24 h-24 flex-shrink-0">
                         <img src="@(string.IsNullOrEmpty(dish.ImageUrl) ? "https://via.placeholder.com/150" : dish.ImageUrl)"
                              alt="@dish.Name" class="w-full h-full object-cover rounded-full border border-gray-100 shadow-sm" />
                     </div>
+
                     <div class="flex-1 pr-10">
                         <h3 class="font-bold text-gray-900 text-base leading-tight mb-1">@dish.Name</h3>
                         <p class="text-gray-800 font-semibold text-sm">@string.Format("{0:N0}", dish.BasePrice) VNĐ</p>
                     </div>
+
                     <button
                         class="absolute bottom-4 right-0 w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center text-xl font-light text-gray-600 hover:bg-gray-100">
                         +
