@@ -24,5 +24,7 @@ namespace MenuQr.Areas.Admin.Models
         // BỔ SUNG THUỘC TÍNH NÀY
         [BsonElement("image_url")]
         public string? ImageUrl { get; set; }
+        [BsonElement("updated_at")]
+            public DateTime UpdatedAt { get; set; }
     }
 }

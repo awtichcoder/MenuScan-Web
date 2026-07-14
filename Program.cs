@@ -1,9 +1,11 @@
 using MongoDB.Driver;
 using CloudinaryDotNet;
+using MenuQr.Hubs;
 using MenuQr.Data;
 using Microsoft.EntityFrameworkCore; // Nhớ thêm using này để dùng được UseSqlServer
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSignalR(); // KÍCH HOẠT DỊCH VỤ SIGNALR
 
 // 1. SETUP MONGODB ATLAS
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDBSettings"));
@@ -73,5 +75,5 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
-
+app.MapHub<StaffHub>("/staffHub");
 app.Run();

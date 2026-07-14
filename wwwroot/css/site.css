@@ -253,6 +253,9 @@
   .top-0 {
     top: 0;
   }
+  .top-2\.5 {
+    top: calc(var(--spacing) * 2.5);
+  }
   .top-4 {
     top: calc(var(--spacing) * 4);
   }
@@ -1237,6 +1240,11 @@
       box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
     }
   }
+  .focus\:ring-\[\#F3C178\] {
+    &:focus {
+      --tw-ring-color: #F3C178;
+    }
+  }
   .focus\:ring-orange-400 {
     &:focus {
       --tw-ring-color: var(--color-orange-400);
@@ -1246,6 +1254,14 @@
     &:focus {
       --tw-outline-style: none;
       outline-style: none;
+    }
+  }
+  .active\:scale-95 {
+    &:active {
+      --tw-scale-x: 95%;
+      --tw-scale-y: 95%;
+      --tw-scale-z: 95%;
+      scale: var(--tw-scale-x) var(--tw-scale-y);
     }
   }
   .md\:mb-20 {
@@ -1547,6 +1563,21 @@ html, body {
   syntax: "*";
   inherits: false;
 }
+@property --tw-scale-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+@property --tw-scale-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+@property --tw-scale-z {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
     *, ::before, ::after, ::backdrop {
@@ -1601,6 +1632,9 @@ html, body {
       --tw-drop-shadow-size: initial;
       --tw-duration: initial;
       --tw-ease: initial;
+      --tw-scale-x: 1;
+      --tw-scale-y: 1;
+      --tw-scale-z: 1;
     }
   }
 }

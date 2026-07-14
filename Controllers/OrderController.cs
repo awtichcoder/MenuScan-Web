@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using System.Text.Json;
+using Microsoft.AspNetCore.SignalR;
+using MenuQr.Hubs;
 using MenuQr.Models; // Chứa ActiveOrder (MongoDB)
  using MenuQr.Data; // Uncomment dòng này nếu ApplicationDbContext của bạn nằm trong thư mục Data
 // using MenuQr.Areas.Admin.Models; // Uncomment nếu class Order, OrderDetail, Invoice nằm trong này
@@ -12,12 +14,17 @@ namespace MenuQr.Controllers
     {
         private readonly IMongoCollection<ActiveOrder> _activeOrderCollection;
         private readonly ApplicationDbContext _sqlDbContext; // Class DbContext của SQL Server (EF Core)
+        private readonly IHubContext<StaffHub> _staffHub;
 
         // Tiêm (Inject) cả 2 Database vào Controller
-        public OrderController(IMongoDatabase mongoDatabase, ApplicationDbContext sqlDbContext)
+        public OrderController(
+            IMongoDatabase mongoDatabase, 
+            ApplicationDbContext sqlDbContext, 
+            IHubContext<StaffHub> staffHub)
         {
             _activeOrderCollection = mongoDatabase.GetCollection<ActiveOrder>("ActiveOrders");
             _sqlDbContext = sqlDbContext;
+            _staffHub = staffHub; // Khởi tạo Hub
         }
 
         // ==============================================================
@@ -203,6 +210,16 @@ public async Task<IActionResult> RemovePendingItem(string tableId, string cartIt
     await _activeOrderCollection.UpdateOneAsync(o => o.TableNumber == tableId && o.Status == "Serving", update);
     return Ok(new { success = true });
 }
+[HttpPost]
+        public async Task<IActionResult> CallStaff(string tableId)
+        {
+            string time = DateTime.Now.ToString("HH:mm");
+            
+            // "ReceiveStaffCall" là tên mã sự kiện. Màn hình nhân viên phải đăng ký tên này mới nghe được.
+            await _staffHub.Clients.All.SendAsync("ReceiveStaffCall", tableId, time);
+            
+            return Ok(new { success = true });
+        }
 
 // Xác nhận toàn bộ món "Pending" thành "Ordered"
 // Xác nhận toàn bộ món "Pending" thành "Ordered" đẩy xuống Bếp
@@ -245,4 +262,5 @@ public async Task<IActionResult> ConfirmPendingItems(string tableId)
     return Ok(new { success = true });
 }
     }
+    
 }
