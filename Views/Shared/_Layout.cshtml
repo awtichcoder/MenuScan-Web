@@ -111,10 +111,11 @@
                     Xác nhận gọi món
                 </button>
                 <!-- Nút Thanh Toán -->
-                <button id="btnCheckout" onclick="checkoutOrder()"
+                <!-- Nút Thanh Toán -->
+                <button id="btnCheckout" onclick="checkoutVnpay()"
                         class="flex-1 bg-[#F3C178] text-black font-bold py-3 rounded-xl transition-colors opacity-50 cursor-not-allowed"
                         disabled>
-                    Thanh toán
+                    Thanh toán (VNPAY)
                 </button>
             </div>
             <p id="cartWarningMsg" class="text-red-500 text-xs text-center mt-2 font-medium hidden">
@@ -163,7 +164,6 @@
         }
 
         try {
-        // Gọi API backend để phát sóng SignalR đến Admin
         const response = await fetch(`/Order/CallStaff?tableId=${TABLE_ID}`, { method: 'POST' });
         if (response.ok) {
         alert(`🔔 Đã gửi yêu cầu! Nhân viên sẽ đến bàn ${TABLE_ID} ngay lập tức.`);
@@ -180,19 +180,15 @@
         // TÍNH NĂNG TÌM KIẾM MÓN ĂN
         // ==========================================
         function searchDishes() {
-        // Lấy từ khóa khách nhập vào
         const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
-
-        // Tìm tất cả các div chứa món ăn (Yêu cầu bên file Menu.cshtml bạn phải đặt class "dish-item" cho mỗi món)
         const dishItems = document.querySelectorAll('.dish-item');
 
         dishItems.forEach(item => {
-        // Đọc toàn bộ chữ bên trong thẻ món ăn để so sánh
         const text = item.innerText.toLowerCase();
         if (text.includes(keyword)) {
-        item.style.display = ''; // Hiện món nếu có chứa từ khóa
+        item.style.display = '';
         } else {
-        item.style.display = 'none'; // Ẩn món nếu không khớp
+        item.style.display = 'none';
         }
         });
         }
@@ -323,20 +319,43 @@
         }
         }
 
-        async function checkoutOrder() {
+        // ==========================================
+        // HÀM THANH TOÁN VNPAY MỚI (ĐÃ TIÊM)
+        // ==========================================
+        async function checkoutVnpay() {
         try {
-        const res = await fetch(`/Order/CheckoutOrder?tableId=${TABLE_ID}`, { method: 'POST' });
+        const btn = document.getElementById('btnCheckout');
+        if (btn) {
+        btn.innerText = "Đang kết nối VNPay...";
+        btn.disabled = true;
+        }
+
+        const res = await fetch(`/Order/CreateVnPayPayment?tableId=${TABLE_ID}`, { method: 'POST' });
+
+        if (!res.ok) {
+        throw new Error("Lỗi mạng hoặc API không tồn tại");
+        }
+
         const data = await res.json();
 
-        if (data.success) {
-        alert("Thanh toán thành công! Cảm ơn quý khách.");
-        loadCartFromDB();
-        closeCartModal();
+        if (data.success && data.url) {
+        // Tự động chuyển hướng sang VNPay
+        window.location.href = data.url;
         } else {
-        alert(data.message || "Lỗi thanh toán");
+        alert(data.message || "Lỗi tạo thanh toán VNPay");
+        if (btn) {
+        btn.innerText = "Thanh toán (VNPAY)";
+        btn.disabled = false;
+        }
         }
         } catch (err) {
-        alert("Lỗi kết nối khi thanh toán!");
+        console.error(err);
+        alert("Lỗi kết nối máy chủ! Vui lòng thử lại.");
+        const btn = document.getElementById('btnCheckout');
+        if (btn) {
+        btn.innerText = "Thanh toán (VNPAY)";
+        btn.disabled = false;
+        }
         }
         }
 

@@ -15,6 +15,10 @@ namespace MenuQr.Controllers
             _categoryCollection = mongoDatabase.GetCollection<Category>("Categories");
             _dishCollection = mongoDatabase.GetCollection<Dish>("Dishes");
         }
+        public IActionResult PaymentSuccess()
+    {
+        return View();
+    }
 
         // 1. TRANG CHỦ (HIỂN THỊ DANH MỤC)
         public async Task<IActionResult> Index(string tableId)

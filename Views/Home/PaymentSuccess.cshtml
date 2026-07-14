@@ -1,0 +1,44 @@
+@{
+    ViewData["Title"] = "Thanh toán thành công";
+    // Tắt Layout mặc định nếu bạn muốn trang này full màn hình, hoặc xóa dòng này đi nếu muốn giữ thanh header cũ
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>@ViewData["Title"]</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 font-sans antialiased flex items-center justify-center min-h-screen p-4">
+
+    <div
+        class="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center transform transition-all duration-500 scale-100">
+
+        <!-- Icon Tích Xanh -->
+        <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <svg class="w-12 h-12 text-green-500 animate-[bounce_1s_ease-in-out_1]" fill="none" stroke="currentColor"
+                 viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">Thanh toán thành công!</h2>
+        <p class="text-gray-500 mb-8 font-medium">Cảm ơn quý khách đã dùng bữa. Hóa đơn đã được ghi nhận vào hệ thống.
+        </p>
+
+        <!-- Nút quay về -->
+        <a href="/"
+           class="block w-full bg-[#F3C178] text-black font-bold text-lg py-3.5 px-6 rounded-2xl shadow-md active:scale-95 hover:bg-orange-400 transition-all">
+            Về màn hình chính
+        </a>
+
+    </div>
+
+</body>
+
+</html>
