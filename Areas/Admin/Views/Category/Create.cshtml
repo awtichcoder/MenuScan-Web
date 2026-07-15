@@ -1,66 +1,110 @@
-@* Areas/Admin/Views/Category/Create.cshtml *@
 @{
-    ViewData["Title"] = "Thêm Danh Mục (Demo)";
+    ViewData["Title"] = "Thêm Danh Mục Mới";
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
 }
 
-<div class="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md mt-10">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">Thêm Danh Mục (Quick Setup)</h2>
+<div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-sm mt-10 border border-gray-100">
+    <div class="mb-6 border-b pb-4">
+        <h2 class="text-2xl font-bold text-gray-800">Thêm Danh Mục Mới</h2>
+        <p class="text-gray-500 text-sm mt-1">Tạo phân loại món ăn cho thực đơn của bạn</p>
+    </div>
 
-    <form id="categoryForm" class="space-y-4">
+    <div class="space-y-4">
         <div>
-            <label class="block text-sm font-medium text-gray-700">Tên danh mục</label>
-            <input type="text" id="Name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="VD: Mì Khô, Nước uống">
+            <label class="block text-sm font-bold text-gray-700 mb-1">Tên danh mục <span
+                class="text-red-500">*</span></label>
+                <input type="text" id="catName" placeholder="VD: Mì nước, Đồ uống..."
+                       class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F3C178]">
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Mô tả ngắn</label>
+                <textarea id="catDesc" rows="3" placeholder="Mô tả về danh mục này..."
+                          class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F3C178]"></textarea>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Thứ tự hiển thị</label>
+                    <input type="number" id="catOrder" value="1" min="1"
+                           class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F3C178]">
+                </div>
+
+                <div class="flex-1">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Trạng thái</label>
+                    <select id="catIsActive"
+                            class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F3C178]">
+                        <option value="true">Đang hoạt động</option>
+                        <option value="false">Ẩn</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Hình ảnh đại diện (Tải từ máy tính)</label>
+                <input type="file" id="catImageFile" accept="image/*"
+                       class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#F3C178] file:text-black hover:file:bg-amber-400 cursor-pointer">
+            </div>
+
+            <div class="pt-4 mt-6 border-t flex justify-end gap-3">
+                <button onclick="window.location.reload()"
+                        class="px-6 py-2.5 rounded-xl border font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                    Làm mới
+                </button>
+                <button id="btnSave" onclick="saveCategory()"
+                        class="px-6 py-2.5 rounded-xl bg-black text-white font-bold hover:bg-gray-800 transition-colors">
+                    Lưu danh mục
+                </button>
+            </div>
         </div>
-        
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Mô tả ngắn</label>
-            <input type="text" id="Description" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="VD: Các món mì trộn đặc biệt">
-        </div>
+    </div>
 
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Thứ tự hiển thị (Số)</label>
-            <input type="number" id="DisplayOrder" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" value="1">
-        </div>
-
-        <div class="pt-4">
-            <button type="button" onclick="submitCategory()" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
-                Tạo Danh Mục Nhanh
-            </button>
-        </div>
-    </form>
-</div>
-
-<script>
-    async function submitCategory() {
-        const data = {
-            Name: document.getElementById('Name').value,
-            Description: document.getElementById('Description').value,
-            DisplayOrder: parseInt(document.getElementById('DisplayOrder').value) || 1,
-            IsActive: true
-        };
-
-        if(!data.Name) {
-            alert("Ít nhất cũng phải nhập cái tên danh mục chứ!");
-            return;
-        }
-
-        try {
-            const response = await fetch('/Admin/Category/CreateApi', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                alert('Tạo OK! ID trong MongoDB: ' + result.id);
-                document.getElementById('categoryForm').reset();
-            } else {
-                alert('Lỗi khi lưu');
+    <script>
+        async function saveCategory() {
+            const nameInput = document.getElementById('catName').value.trim();
+            if (!nameInput) {
+                alert("Vui lòng nhập tên danh mục!");
+                return;
             }
-        } catch (error) {
-            console.error(error);
-            alert('Lỗi kết nối mạng');
+
+            const btn = document.getElementById('btnSave');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Đang tải ảnh lên...';
+
+            // 🛑 ĐÃ ĐỔI: SỬ DỤNG FORMDATA ĐỂ GÓI GÓI HÀNG CHỨA FILE GỬI LÊN C#
+            const formData = new FormData();
+            formData.append('Name', nameInput);
+            formData.append('Description', document.getElementById('catDesc').value.trim());
+            formData.append('DisplayOrder', document.getElementById('catOrder').value);
+            formData.append('IsActive', document.getElementById('catIsActive').value);
+
+            // Lấy file ảnh dưới máy tính nhét vào FormData
+            const fileInput = document.getElementById('catImageFile');
+            if (fileInput.files.length > 0) {
+                formData.append('ImageFile', fileInput.files[0]);
+            }
+
+            try {
+                // Gửi dữ liệu. Lưu ý: FormData tự động xử lý header, không cần ghi Content-Type
+                const res = await fetch('/Admin/Category/CreateApi', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    alert("Tạo danh mục và tải ảnh lên thành công!");
+                    window.location.href = '/Admin/Category/Index'; // Xong thì quay về bảng danh sách
+                } else {
+                    alert("Lỗi: " + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Lỗi kết nối máy chủ!");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Lưu danh mục";
+            }
         }
-    }
-</script>
+    </script>
