@@ -1,0 +1,136 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="/images/favicon/favicon.webp?v=2" type="image/x-icon">
+    <title>@ViewData["Title"] | Hadilao</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+    <div id="root">
+        <div class="content-wrapper max-w-screen-2xl mx-auto text-base">
+            <header id="main-header"
+                    class="fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-white text-black shadow-md ">
+                <nav class="relative max-w-[1440px] mx-auto px-6 h-20 flex justify-between items-center">
+
+                    <a href="/" class="flex items-center gap-2 group z-10">
+                        <img id="logo" src="~/images/logo/logo.webp" alt="Logo" class="w-auto h-10 object-contain  ">
+                    </a>
+
+                    <ul class="hidden lg:flex items-center gap-6 xl:gap-8 font-bold text-[16px] h-full">
+                        <li><a href="#" class="ct-menu">Trang chủ</a></li>
+                        <li><a href="#" class="ct-menu">Thực đơn</a></li>
+                        <li><a href="#" class="ct-menu">Chi nhánh</a></li>
+                        <li><a href="#" class="ct-menu">Khuyến mãi</a></li>
+                        <li><a href="#" class="ct-menu">Tuyển dụng</a></li>
+
+                        <li class="relative group h-full flex items-center cursor-pointer">
+                            <a class="ct-menu">
+                                Về Haidilao <i
+                                class="fa-solid fa-chevron-down text-[11px] mt-0.5 group-hover:rotate-180 transition-transform duration-300"></i>
+                            </a>
+
+                            <div class="absolute top-[80px] left-0 bg-white text-black min-w-[200px] shadow-lg rounded-sm py-2 
+                                invisible opacity-0 translate-y-3 
+                                group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 
+                                transition-all duration-300 ease-out">
+                                <a href="#"
+                                   class="block px-6 py-2.5 hover:text-[#E60012] font-semibold transition-colors">Về
+                                    Haidilao</a>
+                                    <a href="#"
+                                       class="block px-6 py-2.5 hover:text-[#E60012] font-semibold transition-colors">Thành
+                                        viên</a>
+                                        <a href="#"
+                                           class="block px-6 py-2.5 hover:text-[#E60012] font-semibold transition-colors">Liên
+                                            hệ</a>
+                                        </div>
+                                    </li>
+                                </ul>
+
+                                <div class="z-10 flex items-center gap-4">
+                                    <a href="#"
+                                       class="px-6 py-2 rounded-full border  font-bold transition-all duration-300 bg-[#E60012] text-white border-[#E60012] hover:bg-white hover:text-black">
+                                        Đặt bàn
+                                    </a>
+
+                                    <button class="lg:hidden text-2xl ml-2">
+                                        <i class="fa-solid fa-bars"></i>
+                                    </button>
+                                </div>
+
+                            </nav>
+                        </header>
+                        <main class=" ">
+                            @RenderBody()
+                        </main>
+                        <footer class=" w-[95%] xl:w-[65%] mx-auto pb-24 text-gray-500 text-sm mt-14 ">
+                            <div class=" flex flex-col md:flex-row text-center md:text-left gap-8 ">
+                                <div class=" basis-2/6">
+                                    <div class="font-bold text-3xl mb-4 text-gray-800">
+                                        Hadilao
+                                    </div>
+                                    <div class=" mb-8 md:mb-20">
+                                        Delivering the ultimate sneaker journey since 2026. From sole geeks to the true heads
+                                    </div>
+                                    <div class="text-gray-400 hover:text-light-coffee">
+                                        Hadilao Inc. © 2026
+                                    </div>
+                                </div>
+                                <div class="basis-1/6">
+                                    <div class="uppercase font-semibold tracking-wider text-gray-600 mb-4 "> Menu</div>
+                                    <div class="flex flex-col gap-3">
+                                        <div class=""><a href="" class="hover:text-light-coffee">Home</a></div>
+                                        <div class=""><a href="" class="hover:text-light-coffee">Our Products</a></div>
+                                        <div class=""><a href="" class="hover:text-light-coffee">About</a></div>
+                                        <div class=""><a href="" class="hover:text-light-coffee">Contact</a></div>
+                                        <div class=""><a href="" class="hover:text-light-coffee">Styleleguide</a></div>
+                                        <div class=""><a href="https://github.com/awtichcoder" target="_blank"
+                                                             class="hover:text-light-coffee">Hadilao</a></div>
+                                        </div>
+                                    </div>
+                                    <div class="basis-1/6">
+                                        <div class="uppercase font-semibold tracking-wider text-gray-600 mb-4"> Follow Us</div>
+                                        <div class="flex flex-col gap-3">
+                                            <div class=""><a href="" class="hover:text-light-coffee">Facebook</a></div>
+                                            <div class=""><a href="" class="hover:text-light-coffee">Instagram</a></div>
+                                            <div class=""><a href="" class="hover:text-light-coffee">Github</a></div>
+                                            <div class=""><a href="" class="hover:text-light-coffee">Linkedin</a></div>
+
+                                        </div>
+                                    </div>
+                                    <div class="basis-2/6">
+                                        <div>
+                                            <div class="uppercase font-semibold tracking-wider text-gray-600 mb-4"> Contact Us</div>
+                                            <div class=" mb-4"> We&apos;re Always Happy to Help</div>
+                                            <div class="mb-16 text-gray-800 text-2xl font-medium tracking-wider"><a
+                                                href="mailto:hadilao@gmail.com"
+                                                class=" hover:text-light-coffee">Hadilao@gmail.com</a>
+                                            </div>
+                                            <div class=""> <a href="" target="_blank"
+                                                              class="hover:text-light-coffee text-gray-400">Powered by
+                                                TeamAdidop Author</a></div>
+                                            </div>
+
+
+                                        </div>
+                                    </div>
+                                </footer>
+                            </div> @* End content-wrapper *@
+                        </div> @* End #root *@
+
+    
+
+    
+
+    
+
+   
+                        <script type="module" src="~/js/siteProducts.js" asp-append-version="true"></script>
+                        @await RenderSectionAsync("Scripts", required: false)
+                    </body>
+
+                </html>

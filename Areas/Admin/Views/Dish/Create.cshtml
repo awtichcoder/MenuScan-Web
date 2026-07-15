@@ -1,0 +1,255 @@
+@* Areas/Admin/Views/Dish/Create.cshtml *@
+@{
+    ViewData["Title"] = "Thêm Món (Demo)";
+    var categories = ViewBag.Categories as List<MenuQr.Areas.Admin.Models.Category>;
+}
+
+<div class="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md mt-10">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Thêm Món (Quick Setup)</h2>
+
+    <form id="dishForm" class="space-y-6">
+
+        <!-- MỚI: KHU VỰC TẢI ẢNH -->
+        <div class="bg-blue-50 p-4 rounded border border-blue-200 flex gap-4 items-start">
+            <div class="flex-1">
+                <label class="block text-sm font-semibold text-blue-800 mb-2">Hình ảnh món ăn (Cloudinary)</label>
+                <input type="file" id="ImageFile" accept="image/*" class="block w-full text-sm text-gray-500 
+                file:mr-4 file:py-2 file:px-4 
+                file:rounded-md file:border-0 
+                file:text-sm file:font-semibold 
+                file:bg-blue-600 file:text-white 
+                hover:file:bg-blue-700 transition" />
+                <p id="uploadStatus" class="text-xs text-gray-500 mt-2">Chọn ảnh để hệ thống tự động upload...</p>
+                <!-- Thẻ input ẩn chứa URL trả về từ Cloudinary -->
+                <input type="hidden" id="ImageUrl" value="" />
+            </div>
+            <!-- Khung hiển thị ảnh Preview -->
+            <div class="w-32 h-32 bg-gray-200 rounded border flex items-center justify-center overflow-hidden">
+                <img id="ImagePreview" src="" class="hidden object-cover w-full h-full" alt="Preview" />
+                <span id="ImagePlaceholder" class="text-xs text-gray-400">Chưa có ảnh</span>
+            </div>
+        </div>
+
+        <!-- Thông tin cơ bản -->
+        <div class="grid grid-cols-2 gap-4 border-b pb-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Danh mục</label>
+                <select id="CategorySelect" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                    <option value="">-- Chọn danh mục --</option>
+                    @if (categories != null)
+                    {
+                        foreach (var cat in categories)
+                        {
+                            <option value="@cat.Id" data-name="@cat.Name">@cat.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Tên món</label>
+                <input type="text" id="Name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"
+                       placeholder="VD: Mì trộn hải sản">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Giá gốc (VNĐ)</label>
+                <input type="number" id="BasePrice"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" value="50000">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Giảm giá (%)</label>
+                <input type="number" id="DiscountPercent"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" value="0">
+            </div>
+        </div>
+
+        <!-- Cấu hình Size -->
+        <div class="bg-gray-50 p-4 rounded border">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="font-semibold text-gray-700">Kích cỡ (Size)</h3>
+                <button type="button" onclick="addOption('sizeContainer')"
+                        class="text-sm bg-blue-100 text-blue-600 px-2 py-1 rounded">+ Thêm Size</button>
+            </div>
+            <div id="sizeContainer" class="space-y-2">
+                <div class="flex gap-2 option-item">
+                    <input type="text" placeholder="Tên (VD: Size M)" class="opt-name block w-1/2 rounded border p-2"
+                           value="Size M">
+                    <input type="number" placeholder="Giá cộng thêm (VD: 0)"
+                           class="opt-price block w-1/2 rounded border p-2" value="0">
+                </div>
+            </div>
+        </div>
+
+        <!-- Cấu hình Topping -->
+        <div class="bg-gray-50 p-4 rounded border">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="font-semibold text-gray-700">Topping ăn kèm</h3>
+                <button type="button" onclick="addOption('toppingContainer')"
+                        class="text-sm bg-blue-100 text-blue-600 px-2 py-1 rounded">+ Thêm Topping</button>
+            </div>
+            <div id="toppingContainer" class="space-y-2">
+                <div class="flex gap-2 option-item">
+                    <input type="text" placeholder="Tên (VD: Thêm tôm)" class="opt-name block w-1/2 rounded border p-2">
+                    <input type="number" placeholder="Giá cộng thêm (VD: 15000)"
+                           class="opt-price block w-1/2 rounded border p-2">
+                </div>
+            </div>
+        </div>
+
+        <button type="button" onclick="submitDish()"
+                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+            Tạo Sản Phẩm
+        </button>
+    </form>
+</div>
+
+<script>
+    // --------------------------------------------------------
+    // MỚI: SỰ KIỆN UPLOAD ẢNH KHI NGƯỜI DÙNG CHỌN FILE
+    // --------------------------------------------------------
+    document.getElementById('ImageFile').addEventListener('change', async function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const statusText = document.getElementById('uploadStatus');
+        statusText.textContent = "⏳ Đang tải ảnh lên Cloudinary...";
+        statusText.className = "text-xs text-yellow-600 mt-2 font-semibold";
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/Admin/Dish/UploadImage', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                // Upload thành công -> Lưu URL vào thẻ ẩn và show ảnh
+                document.getElementById('ImageUrl').value = result.url;
+
+                const imgPreview = document.getElementById('ImagePreview');
+                imgPreview.src = result.url;
+                imgPreview.classList.remove('hidden');
+                document.getElementById('ImagePlaceholder').classList.add('hidden');
+
+                statusText.textContent = "✅ Tải ảnh thành công!";
+                statusText.className = "text-xs text-green-600 mt-2 font-semibold";
+            } else {
+                statusText.textContent = "❌ Lỗi: " + result.message;
+                statusText.className = "text-xs text-red-600 mt-2";
+            }
+        } catch (error) {
+            console.error('Lỗi upload', error);
+            statusText.textContent = "❌ Lỗi kết nối mạng khi tải ảnh!";
+            statusText.className = "text-xs text-red-600 mt-2";
+        }
+    });
+
+    // --------------------------------------------------------
+    // CÁC HÀM XỬ LÝ OPTION CŨ (GIỮ NGUYÊN)
+    // --------------------------------------------------------
+    function addOption(containerId) {
+        const container = document.getElementById(containerId);
+        const div = document.createElement('div');
+        div.className = 'flex gap-2 option-item mt-2';
+        div.innerHTML = `
+            <input type="text" placeholder="Tên option" class="opt-name block w-1/2 rounded border p-2">
+            <input type="number" placeholder="Giá cộng thêm" class="opt-price block w-1/2 rounded border p-2" value="0">
+            <button type="button" onclick="this.parentElement.remove()" class="bg-red-500 text-white px-3 rounded">X</button>
+        `;
+        container.appendChild(div);
+    }
+
+    function getOptionsFromContainer(containerId) {
+        const options = [];
+        const items = document.querySelectorAll(`#${containerId} .option-item`);
+        items.forEach(item => {
+            const name = item.querySelector('.opt-name').value;
+            const price = item.querySelector('.opt-price').value;
+            if (name) {
+                options.push({
+                    Name: name,
+                    ExtraPrice: parseFloat(price) || 0
+                });
+            }
+        });
+        return options;
+    }
+
+    async function submitDish() {
+        const select = document.getElementById('CategorySelect');
+        const categoryId = select.value;
+        const categoryName = select.options[select.selectedIndex]?.getAttribute('data-name');
+
+        if (!categoryId) {
+            alert("Vui lòng chọn danh mục!");
+            return;
+        }
+
+        const sizeOptions = getOptionsFromContainer('sizeContainer');
+        const toppingOptions = getOptionsFromContainer('toppingContainer');
+
+        const specifications = [];
+
+        if (sizeOptions.length > 0) {
+            specifications.push({
+                SpecName: "Kích cỡ",
+                IsRequired: true,
+                MaxChoices: 1,
+                Options: sizeOptions
+            });
+        }
+
+        if (toppingOptions.length > 0) {
+            specifications.push({
+                SpecName: "Topping",
+                IsRequired: false,
+                MaxChoices: toppingOptions.length,
+                Options: toppingOptions
+            });
+        }
+
+        const data = {
+            CategoryId: categoryId,
+            CategoryName: categoryName,
+            Name: document.getElementById('Name').value,
+            BasePrice: parseFloat(document.getElementById('BasePrice').value) || 0,
+            DiscountPercent: parseInt(document.getElementById('DiscountPercent').value) || 0,
+            IsAvailable: true,
+            // LẤY URL TỪ THẺ ẨN SAU KHI UPLOAD
+            ImageUrl: document.getElementById('ImageUrl').value,
+            Specifications: specifications
+        };
+
+        try {
+            const response = await fetch('/Admin/Dish/CreateApi', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                alert('Tạo món thành công! ID: ' + result.id);
+                // Reset form cơ bản để nhập món tiếp theo
+                document.getElementById('Name').value = '';
+                document.getElementById('BasePrice').value = '50000';
+
+                // Reset khu vực ảnh
+                document.getElementById('ImageFile').value = '';
+                document.getElementById('ImageUrl').value = '';
+                document.getElementById('ImagePreview').classList.add('hidden');
+                document.getElementById('ImagePlaceholder').classList.remove('hidden');
+                document.getElementById('uploadStatus').textContent = "Chọn ảnh để hệ thống tự động upload...";
+                document.getElementById('uploadStatus').className = "text-xs text-gray-500 mt-2";
+            } else {
+                alert('Lỗi khi lưu');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Lỗi kết nối mạng');
+        }
+    }
+</script>

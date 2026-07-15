@@ -1,0 +1,168 @@
+@* Areas/Admin/Views/Promotion/Index.cshtml *@
+@{
+    ViewData["Title"] = "Khuyến mãi";
+}
+
+<partial name="_AdminNav" />
+
+<div class="max-w-5xl mx-auto p-6">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-gray-800">Khuyến mãi</h2>
+        <button type="button" onclick="openForm()"
+                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            + Tạo khuyến mãi
+        </button>
+    </div>
+
+    <div id="alertBox" class="hidden mb-4 px-4 py-3 rounded text-sm"></div>
+
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 text-gray-600 text-left">
+                <tr>
+                    <th class="px-4 py-3">Tên chương trình</th>
+                    <th class="px-4 py-3">Giảm</th>
+                    <th class="px-4 py-3">Thời gian</th>
+                    <th class="px-4 py-3">Món áp dụng</th>
+                    <th class="px-4 py-3">Trạng thái</th>
+                    <th class="px-4 py-3 text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-gray-100">
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Đang tải...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal tạo KM -->
+<div id="formModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Tạo khuyến mãi</h3>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Tên chương trình *</label>
+                <input type="text" id="Name" class="mt-1 block w-full rounded-md border p-2" placeholder="VD: Giảm giá cuối tuần">
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Giảm (%) *</label>
+                    <input type="number" id="DiscountPercent" min="1" max="100" value="10" class="mt-1 block w-full rounded-md border p-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Từ ngày *</label>
+                    <input type="date" id="StartDate" class="mt-1 block w-full rounded-md border p-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Đến ngày *</label>
+                    <input type="date" id="EndDate" class="mt-1 block w-full rounded-md border p-2">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Chọn món áp dụng *</label>
+                <div id="dishList" class="border rounded-md p-2 max-h-48 overflow-y-auto space-y-1 text-sm text-gray-400">Đang tải món...</div>
+            </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button type="button" onclick="closeForm()" class="px-4 py-2 rounded-md border text-gray-600 text-sm">Hủy</button>
+            <button type="button" onclick="submitForm()" class="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium">Lưu</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const BASE = '/Admin/Promotion';
+
+    function showAlert(msg, ok = true) {
+        const box = document.getElementById('alertBox');
+        box.textContent = msg;
+        box.className = 'mb-4 px-4 py-3 rounded text-sm ' + (ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
+        box.classList.remove('hidden');
+        setTimeout(() => box.classList.add('hidden'), 4000);
+    }
+    function esc(s){return (s??'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    function fmtDate(v){ const d=new Date(v); return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear(); }
+    function statusBadge(s){
+        const map = {
+            upcoming: ['Sắp diễn ra','bg-blue-100 text-blue-700'],
+            active:   ['Đang chạy','bg-green-100 text-green-700'],
+            ended:    ['Đã kết thúc','bg-gray-100 text-gray-500']
+        };
+        const [txt,cls] = map[s] || ['—','bg-gray-100 text-gray-500'];
+        return `<span class="px-2 py-0.5 rounded text-xs ${cls}">${txt}</span>`;
+    }
+
+    async function loadPromotions() {
+        const body = document.getElementById('tableBody');
+        try {
+            const res = await fetch(`${BASE}/List`);
+            const list = (await res.json()).data || [];
+            if (list.length === 0) { body.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Chưa có khuyến mãi nào.</td></tr>`; return; }
+            body.innerHTML = list.map(p => `
+                <tr>
+                    <td class="px-4 py-2 font-medium text-gray-800">${esc(p.name)}</td>
+                    <td class="px-4 py-2 text-purple-600 font-semibold">${p.discountPercent}%</td>
+                    <td class="px-4 py-2 text-gray-500">${fmtDate(p.startDate)} – ${fmtDate(p.endDate)}</td>
+                    <td class="px-4 py-2 text-gray-600" title="${esc((p.dishNames||[]).join(', '))}">${p.dishCount} món</td>
+                    <td class="px-4 py-2">${statusBadge(p.status)}</td>
+                    <td class="px-4 py-2 text-right"><button onclick="deletePromo('${p.id}')" class="text-red-600 hover:underline">Xóa</button></td>
+                </tr>`).join('');
+        } catch (e) {
+            body.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-red-500">Lỗi tải dữ liệu.</td></tr>`;
+        }
+    }
+    document.addEventListener('DOMContentLoaded', loadPromotions);
+
+    async function openForm() {
+        document.getElementById('Name').value = '';
+        document.getElementById('DiscountPercent').value = 10;
+        const today = new Date().toISOString().slice(0,10);
+        document.getElementById('StartDate').value = today;
+        document.getElementById('EndDate').value = today;
+        document.getElementById('formModal').classList.remove('hidden');
+
+        const box = document.getElementById('dishList');
+        box.innerHTML = 'Đang tải món...';
+        try {
+            const list = (await (await fetch(`${BASE}/ActiveDishes`)).json()).data || [];
+            if (list.length === 0) { box.innerHTML = '<div class="text-gray-400">Không có món đang kinh doanh.</div>'; return; }
+            box.innerHTML = list.map(d => `
+                <label class="flex items-center gap-2 text-gray-700">
+                    <input type="checkbox" class="dishChk" value="${d.id}">
+                    <span>${esc(d.name.trim())}</span>
+                </label>`).join('');
+        } catch (e) { box.innerHTML = '<div class="text-red-500">Lỗi tải danh sách món.</div>'; }
+    }
+    function closeForm() { document.getElementById('formModal').classList.add('hidden'); }
+
+    async function submitForm() {
+        const dishIds = Array.from(document.querySelectorAll('.dishChk:checked')).map(c => c.value);
+        const data = {
+            Name: document.getElementById('Name').value,
+            DiscountPercent: parseInt(document.getElementById('DiscountPercent').value) || 0,
+            StartDate: document.getElementById('StartDate').value,
+            EndDate: document.getElementById('EndDate').value,
+            DishIds: dishIds
+        };
+        try {
+            const res = await fetch(`${BASE}/CreateApi`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (res.ok) { closeForm(); showAlert(json.message || 'Thành công', true); loadPromotions(); }
+            else { showAlert(json.message || 'Có lỗi xảy ra', false); }
+        } catch (e) { showAlert('Lỗi kết nối mạng', false); }
+    }
+
+    async function deletePromo(id) {
+        if (!confirm('Bạn chắc chắn muốn xóa khuyến mãi này?')) return;
+        try {
+            const res = await fetch(`${BASE}/DeleteApi?id=${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (res.ok) { showAlert(json.message || 'Đã xóa', true); loadPromotions(); }
+            else { showAlert(json.message || 'Không thể xóa', false); }
+        } catch (e) { showAlert('Lỗi kết nối mạng', false); }
+    }
+</script>
+}

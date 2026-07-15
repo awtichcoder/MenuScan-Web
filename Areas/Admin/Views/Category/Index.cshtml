@@ -1,0 +1,196 @@
+@* Areas/Admin/Views/Category/Index.cshtml *@
+@{
+    ViewData["Title"] = "Quản lý Danh mục";
+}
+
+<partial name="_AdminNav" />
+
+<div class="max-w-5xl mx-auto p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Quản lý Danh mục</h2>
+        <button type="button" onclick="openForm()"
+                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            + Thêm danh mục
+        </button>
+    </div>
+
+    <div id="alertBox" class="hidden mb-4 px-4 py-3 rounded text-sm"></div>
+
+    <!-- Bảng danh sách -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 text-gray-600 text-left">
+                <tr>
+                    <th class="px-4 py-3">Thứ tự</th>
+                    <th class="px-4 py-3">Tên danh mục</th>
+                    <th class="px-4 py-3">Mô tả</th>
+                    <th class="px-4 py-3">Trạng thái</th>
+                    <th class="px-4 py-3 text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="categoryTableBody" class="divide-y divide-gray-100">
+                <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Đang tải...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal thêm/sửa -->
+<div id="formModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
+        <h3 id="formTitle" class="text-xl font-bold text-gray-800 mb-4">Thêm danh mục</h3>
+        <input type="hidden" id="EditId" value="" />
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Tên danh mục *</label>
+                <input type="text" id="Name" maxlength="100"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"
+                       placeholder="VD: Mì Khô, Nước uống">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Mô tả ngắn</label>
+                <input type="text" id="Description"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Thứ tự hiển thị</label>
+                    <input type="number" id="DisplayOrder" value="1"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+                <div class="flex items-end">
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="checkbox" id="IsActive" checked class="rounded"> Đang hoạt động
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button type="button" onclick="closeForm()"
+                    class="px-4 py-2 rounded-md border text-gray-600 text-sm">Hủy</button>
+            <button type="button" onclick="submitForm()"
+                    class="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium">Lưu</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const BASE = '/Admin/Category';
+
+    function showAlert(msg, ok = true) {
+        const box = document.getElementById('alertBox');
+        box.textContent = msg;
+        box.className = 'mb-4 px-4 py-3 rounded text-sm ' +
+            (ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
+        box.classList.remove('hidden');
+        setTimeout(() => box.classList.add('hidden'), 4000);
+    }
+
+    function esc(s) {
+        return (s ?? '').toString()
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async function loadCategories() {
+        const body = document.getElementById('categoryTableBody');
+        try {
+            const res = await fetch(`${BASE}/List`);
+            const json = await res.json();
+            const list = json.data || [];
+            if (list.length === 0) {
+                body.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Chưa có danh mục nào.</td></tr>`;
+                return;
+            }
+            body.innerHTML = list.map(c => `
+                <tr>
+                    <td class="px-4 py-3">${c.displayOrder}</td>
+                    <td class="px-4 py-3 font-medium text-gray-800">${esc(c.name)}</td>
+                    <td class="px-4 py-3 text-gray-500">${esc(c.description)}</td>
+                    <td class="px-4 py-3">${c.isActive
+                        ? '<span class="text-green-600">Hoạt động</span>'
+                        : '<span class="text-gray-400">Ẩn</span>'}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <button onclick='editCategory(${JSON.stringify(c)})' class="text-blue-600 hover:underline mr-3">Sửa</button>
+                        <button onclick="deleteCategory('${c.id}')" class="text-red-600 hover:underline">Xóa</button>
+                    </td>
+                </tr>`).join('');
+        } catch (e) {
+            body.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-red-500">Lỗi tải dữ liệu.</td></tr>`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadCategories);
+
+    function openForm() {
+        document.getElementById('EditId').value = '';
+        document.getElementById('Name').value = '';
+        document.getElementById('Description').value = '';
+        document.getElementById('DisplayOrder').value = 1;
+        document.getElementById('IsActive').checked = true;
+        document.getElementById('formTitle').textContent = 'Thêm danh mục';
+        document.getElementById('formModal').classList.remove('hidden');
+    }
+
+    function editCategory(c) {
+        document.getElementById('EditId').value = c.id;
+        document.getElementById('Name').value = c.name;
+        document.getElementById('Description').value = c.description || '';
+        document.getElementById('DisplayOrder').value = c.displayOrder;
+        document.getElementById('IsActive').checked = c.isActive;
+        document.getElementById('formTitle').textContent = 'Sửa danh mục';
+        document.getElementById('formModal').classList.remove('hidden');
+    }
+
+    function closeForm() {
+        document.getElementById('formModal').classList.add('hidden');
+    }
+
+    async function submitForm() {
+        const id = document.getElementById('EditId').value;
+        const data = {
+            Name: document.getElementById('Name').value,
+            Description: document.getElementById('Description').value,
+            DisplayOrder: parseInt(document.getElementById('DisplayOrder').value) || 1,
+            IsActive: document.getElementById('IsActive').checked
+        };
+
+        const url = id ? `${BASE}/UpdateApi?id=${id}` : `${BASE}/CreateApi`;
+        const method = id ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (res.ok) {
+                closeForm();
+                showAlert(json.message || 'Thành công', true);
+                loadCategories();
+            } else {
+                showAlert(json.message || 'Có lỗi xảy ra', false);
+            }
+        } catch (e) {
+            showAlert('Lỗi kết nối mạng', false);
+        }
+    }
+
+    async function deleteCategory(id) {
+        if (!confirm('Bạn chắc chắn muốn xóa danh mục này?')) return;
+        try {
+            const res = await fetch(`${BASE}/DeleteApi?id=${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (res.ok) {
+                showAlert(json.message || 'Đã xóa', true);
+                loadCategories();
+            } else {
+                showAlert(json.message || 'Không thể xóa', false);
+            }
+        } catch (e) {
+            showAlert('Lỗi kết nối mạng', false);
+        }
+    }
+</script>
+}

@@ -1,0 +1,16 @@
+@{
+    var current = ViewContext.RouteData.Values["controller"]?.ToString();
+    string Cls(string ctrl) => ctrl == current
+        ? "px-4 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium"
+        : "px-4 py-2 rounded-md text-gray-600 hover:bg-gray-100 text-sm font-medium";
+}
+<nav class="max-w-5xl mx-auto mt-24 mb-2 px-6">
+    <div class="flex items-center gap-2 bg-white rounded-lg shadow p-2">
+        <a href="/Admin/Dashboard" class="@Cls("Dashboard")">Tổng quan</a>
+        <a href="/Admin/Category" class="@Cls("Category")">Danh mục</a>
+        <a href="/Admin/Dish" class="@Cls("Dish")">Món ăn</a>
+        <a href="/Admin/Table" class="@Cls("Table")">Bàn ăn</a>
+        <a href="/Admin/Statistics" class="@Cls("Statistics")">Thống kê</a>
+        <a href="/Admin/Promotion" class="@Cls("Promotion")">Khuyến mãi</a>
+    </div>
+</nav>
