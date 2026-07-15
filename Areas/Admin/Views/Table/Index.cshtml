@@ -1,0 +1,178 @@
+@model List<MenuQr.Models.DiningTable>
+@{
+    ViewData["Title"] = "Quản lý Bàn & Mã QR";
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+}
+
+<div class="max-w-6xl mx-auto p-4 md:p-6 bg-white rounded-2xl shadow-sm mt-6 border border-gray-100">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b pb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Quản lý Bàn & Mã QR</h1>
+            <p class="text-sm text-gray-500">Tạo bàn ăn, kết xuất file in ấn PDF riêng lẻ và sao chép liên kết gọi món.
+            </p>
+        </div>
+        <button onclick="openAddModal()"
+                class="inline-flex items-center gap-2 bg-black hover:bg-gray-800 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-all shadow-sm">
+            + Thêm bàn mới
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        @foreach (var table in Model)
+        {
+            // 1. Tự động sinh Link ngay trên giao diện cho an toàn tuyệt đối
+            var qrLink = $"{Context.Request.Scheme}://{Context.Request.Host}/Home/?tableId={table.TableNumber}";
+
+            // 2. Ép kiểu an toàn cho QR Code (Nếu lỡ quên Rebuild Backend thì web cũng không bị sập)
+            var qrDict = ViewBag.QrList as System.Collections.Generic.Dictionary<string, string>;
+            var qrCodeBase64 = (qrDict != null && table.TableNumber != null && qrDict.ContainsKey(table.TableNumber))
+                                ? qrDict[table.TableNumber]
+                                : "";
+
+            <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100 flex flex-col shadow-sm relative group">
+                <button onclick="deleteTable('@table.TableNumber', '@table.Name')"
+                        class="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors" title="Xóa bàn này">
+                    <i class="fa-regular fa-trash-can text-lg"></i>
+                </button>
+
+                <div class="flex gap-4 items-center mb-4">
+                    <div
+                        class="w-24 h-24 bg-white p-1.5 rounded-xl border border-gray-200 flex-shrink-0 flex items-center justify-center">
+                        <img src="@qrCodeBase64" class="w-full h-full object-contain" alt="QR @table.Name">
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-lg">@table.Name</h3>
+                        <span class="text-xs bg-gray-200 text-gray-600 font-mono px-2 py-0.5 rounded-md">Mã:
+                            @table.TableNumber</span>
+                        </div>
+                    </div>
+
+                    <div
+                        class="bg-white px-3 py-2 rounded-xl border border-gray-200 flex items-center justify-between gap-2 mb-4">
+                        <span class="text-xs text-gray-500 truncate select-all font-mono">@qrLink</span>
+                        <button onclick="copyToClipboard('@qrLink')" class="text-gray-400 hover:text-black transition-colors"
+                                title="Sao chép liên kết">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+
+                    <div class="mt-auto pt-3 border-t border-gray-100 flex justify-between items-center">
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Đang sử dụng
+                        </span>
+                        <a asp-area="Admin" asp-controller="Table" asp-action="ExportSinglePdf"
+                           asp-route-tableNumber="@table.TableNumber"
+                           class="inline-flex items-center gap-1.5 text-amber-600 hover:text-amber-700 text-sm font-bold transition-all">
+                            <i class="fa-solid fa-file-pdf"></i> Tải file PDF QR
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div id="addModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Thêm bàn mới</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Mã bàn (Dùng làm ID trên
+                        URL)</label>
+                        <input type="text" id="inputTableNum" placeholder="VD: Ban01, Ban02..."
+                               class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F3C178]">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tên hiển thị</label>
+                        <input type="text" id="inputTableName" placeholder="VD: Bàn số 1..."
+                               class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F3C178]">
+                    </div>
+                </div>
+                <div class="flex gap-2 mt-6">
+                    <button onclick="closeAddModal()"
+                            class="flex-1 py-2.5 rounded-xl border font-bold text-gray-600 hover:bg-gray-50 transition-colors">Đóng</button>
+                    <button onclick="submitTable()"
+                            class="flex-1 py-2.5 rounded-xl bg-black hover:bg-gray-800 text-white font-bold transition-colors">Lưu
+                        lại</button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                function openAddModal() {
+                    document.getElementById('addModal').classList.remove('hidden');
+                }
+
+                function closeAddModal() {
+                    document.getElementById('addModal').classList.add('hidden');
+                }
+
+                // Hàm copy link nhanh
+                function copyToClipboard(text) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        alert("Đã sao chép đường dẫn liên kết bàn!");
+                    }).catch(err => {
+                        console.error("Không thể sao chép: ", err);
+                    });
+                }
+
+                // Gọi API thêm bàn
+                async function submitTable() {
+                    const num = document.getElementById('inputTableNum').value.trim();
+                    const name = document.getElementById('inputTableName').value.trim();
+                    if (!num || !name) {
+                        alert("Vui lòng điền đủ thông tin!");
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append("tableNumber", num);
+                    formData.append("name", name);
+
+                    try {
+                        const res = await fetch('/Admin/Table/Create', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (res.ok) {
+                            alert("Thêm bàn thành công!");
+                            window.location.reload();
+                        } else {
+                            const text = await res.json();
+                            alert(text.message || "Lỗi khi thêm bàn!");
+                        }
+                    } catch (err) {
+                        alert("Lỗi kết nối máy chủ!");
+                    }
+                }
+
+                // Gọi API xóa mềm bàn
+                async function deleteTable(tableNumber, tableName) {
+                    if (!confirm(`Bạn có chắc chắn muốn ngừng sử dụng và ẩn ${tableName} không? Các hóa đơn cũ của bàn này vẫn sẽ được giữ lại.`)) {
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append("tableNumber", tableNumber);
+
+                    try {
+                        const res = await fetch('/Admin/Table/DeleteSoft', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await res.json();
+                        if (data.success) {
+                            alert(`Đã xóa mềm thành công! ${tableName} sẽ không thể truy cập được nữa.`);
+                            window.location.reload();
+                        } else {
+                            alert(data.message || "Lỗi khi xóa bàn!");
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert("Lỗi kết nối máy chủ!");
+                    }
+                }
+            </script>

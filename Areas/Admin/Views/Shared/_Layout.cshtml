@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Quản trị hệ thống</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="bg-gray-100 font-sans antialiased text-gray-900">
+
+    <div class="flex h-screen overflow-hidden">
+
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden" onclick="toggleSidebar()">
+        </div>
+
+        <aside id="sidebar"
+               class="fixed inset-y-0 left-0 bg-white shadow-xl max-w-xs w-64 z-50 transform -translate-x-full lg:translate-x-0 lg:static lg:flex lg:flex-col transition-transform duration-300 ease-in-out">
+            <div class="flex items-center justify-center h-20 border-b border-gray-100">
+                <div class="text-2xl font-black text-[#F3C178] uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-utensils"></i> MENU QR
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                <a href="/Admin"
+                   class="flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-[#F3C178] transition-colors">
+                    <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+                    <span class="font-medium">Tổng quan</span>
+                </a>
+
+                <a asp-area="Admin" asp-controller="Admin" asp-action="Tables"
+                   class="flex items-center gap-3 px-4 py-3 bg-[#F3C178]/10 text-[#F3C178] rounded-xl font-bold transition-colors">
+                    <i class="fa-solid fa-qrcode w-5 text-center"></i>
+                    <span>Quản lý Bàn / QR</span>
+                </a>
+
+                <a href="#"
+                   class="flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-[#F3C178] transition-colors">
+                    <i class="fa-solid fa-layer-group w-5 text-center"></i>
+                    <span class="font-medium">Danh mục món</span>
+                </a>
+
+                <a href="#"
+                   class="flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-[#F3C178] transition-colors">
+                    <i class="fa-solid fa-burger w-5 text-center"></i>
+                    <span class="font-medium">Thực đơn</span>
+                </a>
+
+                <a href="#"
+                   class="flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-[#F3C178] transition-colors">
+                    <i class="fa-solid fa-receipt w-5 text-center"></i>
+                    <span class="font-medium">Hóa đơn</span>
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-gray-100">
+                <div class="flex items-center gap-3 px-4 py-2">
+                    <div
+                        class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600">
+                        AD
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">Admin Quán</p>
+                        <a href="/" class="text-xs text-red-500 hover:underline">Đăng xuất</a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+            <header class="bg-white shadow-sm h-20 flex items-center justify-between px-6 lg:px-10 z-30">
+                <button onclick="toggleSidebar()"
+                        class="lg:hidden text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <i class="fa-solid fa-bars text-2xl"></i>
+                </button>
+
+                <h2 class="text-xl font-bold text-gray-800 hidden sm:block">
+                    @ViewData["Title"]
+                </h2>
+
+                <div class="flex items-center gap-4">
+                    <button class="relative text-gray-500 hover:text-[#F3C178] transition-colors">
+                        <i class="fa-regular fa-bell text-xl"></i>
+                        <span class="absolute top-0 right-0 -mt-1 -mr-1 flex h-3 w-3">
+                            <span
+                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        </span>
+                    </button>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 md:p-6 lg:p-8">
+                @RenderBody()
+            </main>
+        </div>
+
+    </div>
+
+    <script>
+        function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+        }
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+
+</html>

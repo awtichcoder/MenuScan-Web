@@ -7,11 +7,13 @@ namespace MenuQr.Controllers
 {
     public class HomeController : Controller
     {
+        private readonly IMongoCollection<DiningTable> _tableCollection;
         private readonly IMongoCollection<Category> _categoryCollection;
         private readonly IMongoCollection<Dish> _dishCollection;
 
         public HomeController(IMongoDatabase mongoDatabase)
         {
+            _tableCollection = mongoDatabase.GetCollection<DiningTable>("DiningTables");
             _categoryCollection = mongoDatabase.GetCollection<Category>("Categories");
             _dishCollection = mongoDatabase.GetCollection<Dish>("Dishes");
         }
