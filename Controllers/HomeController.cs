@@ -23,6 +23,8 @@ namespace MenuQr.Controllers
     }
 
         // 1. TRANG CHỦ (HIỂN THỊ DANH MỤC)
+       // 1. TRANG CHỦ (CHÀO MỪNG)
+        [HttpGet]
         public async Task<IActionResult> Index(string tableId)
         {
             if (string.IsNullOrEmpty(tableId))
@@ -30,7 +32,15 @@ namespace MenuQr.Controllers
                 return Content("Vui lòng quét mã QR tại bàn để xem Menu.");
             }
 
-            ViewBag.TableId = tableId;
+            // 🛑 CHỐT CHẶN TỬ THẦN: Kiểm tra bàn có tồn tại trong hệ thống không!
+            var activeTable = await _tableCollection.Find(t => t.TableNumber == tableId && t.IsActive).FirstOrDefaultAsync();
+            if (activeTable == null)
+            {
+                return Content("Mã bàn này không tồn tại trên hệ thống (Bàn ảo)!");
+            }
+
+            ViewBag.TableId = activeTable.TableNumber;
+            ViewBag.TableName = activeTable.Name; // Gửi thêm tên bàn ra giao diện nếu cần
 
             var categories = await _categoryCollection.Find(c => c.IsActive).ToListAsync();
             
@@ -38,10 +48,19 @@ namespace MenuQr.Controllers
         }
 
         // 2. TRANG MENU (HIỂN THỊ DANH SÁCH MÓN ĂN TRƯỢT NGANG)
+        [HttpGet]
         public async Task<IActionResult> Menu(string tableId, string id = "all")
         {
             if (string.IsNullOrEmpty(tableId)) return Content("Vui lòng quét mã QR.");
-            ViewBag.TableId = tableId;
+
+            // 🛑 CHỐT CHẶN TỬ THẦN LẦN 2: Chống gõ URL ảo thẳng vào Menu
+            var activeTable = await _tableCollection.Find(t => t.TableNumber == tableId && t.IsActive).FirstOrDefaultAsync();
+            if (activeTable == null)
+            {
+                return Content("Mã bàn này không tồn tại trên hệ thống (Bàn ảo)!");
+            }
+
+            ViewBag.TableId = activeTable.TableNumber;
 
             // Lấy danh mục, SẮP XẾP THEO display_order
             var categories = await _categoryCollection.Find(c => c.IsActive)
