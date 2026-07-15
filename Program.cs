@@ -1,21 +1,25 @@
 using MongoDB.Driver;
 using CloudinaryDotNet;
-using MenuQr.Hubs;
+using Microsoft.EntityFrameworkCore;
 using MenuQr.Data;
-using Microsoft.EntityFrameworkCore; // Nhớ thêm using này để dùng được UseSqlServer
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSignalR(); // KÍCH HOẠT DỊCH VỤ SIGNALR
+
 
 // 1. SETUP MONGODB ATLAS
+
+
+// Đăng ký Class MongoDbSettings đọc dữ liệu từ appsettings.json
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDBSettings"));
 
+// Đăng ký IMongoClient dưới dạng Singleton (toàn ứng dụng dùng chung 1 kết nối duy nhất)
 builder.Services.AddSingleton<IMongoClient>(sp =>
 {
     var connectionString = builder.Configuration.GetValue<string>("MongoDBSettings:ConnectionString");
     return new MongoClient(connectionString);
 });
 
+// Đăng ký IMongoDatabase để các Controller (như DishController) có thể nhận được qua Constructor
 builder.Services.AddScoped<IMongoDatabase>(sp => 
 {
     var client = sp.GetRequiredService<IMongoClient>();
@@ -24,9 +28,24 @@ builder.Services.AddScoped<IMongoDatabase>(sp =>
 });
 
 
+
+// 1B. SETUP SQL SERVER (EF Core) - MenuDb
+
+
+// Đăng ký AppDbContext dùng SQL Server qua connection string "DefaultConnection"
+// Schema tương ứng đã có ở Models/data/MenusDb.sql (Users, Orders, OrderDetails, Invoices)
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
+
 // 2. SETUP CLOUDINARY
+
+
+// Đăng ký Class CloudinarySettings để xài Options Pattern
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 
+// Đăng ký đối tượng Cloudinary để sau này inject vào Controller/Service là xài luôn
 builder.Services.AddScoped(sp =>
 {
     var config = builder.Configuration.GetSection("CloudinarySettings").Get<CloudinarySettings>();
@@ -35,27 +54,25 @@ builder.Services.AddScoped(sp =>
 });
 
 
+
 // 3. SETUP VNPAY
+
+
+// Đăng ký Class VnPaySettings để khi cần lấy dữ liệu TmnCode hay HashSecret thì gọi ra
 builder.Services.Configure<VnPaySettings>(builder.Configuration.GetSection("VnPay"));
 
+// UC25 - Job nền tự bật/tắt khuyến mãi theo thời gian (BR10.6)
+builder.Services.AddHostedService<MenuQr.Areas.Admin.Services.PromotionStatusJob>();
+
+// Add services to the container.
 builder.Services.AddControllersWithViews();
 
-
-// =======================================================
-// SETUP SQL SERVER (PHẢI NẰM TRƯỚC BUILDER.BUILD)
-// =======================================================
-var sqlConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(sqlConnectionString));
-
-
-// =======================================================
-// LỆNH BUILD BẮT BUỘC NẰM Ở ĐÂY
-// =======================================================
 var app = builder.Build();
 
 
 // 4. CONFIGURE THE HTTP REQUEST PIPELINE
+
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -75,5 +92,5 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
-app.MapHub<StaffHub>("/staffHub");
+
 app.Run();

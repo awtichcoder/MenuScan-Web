@@ -1,0 +1,42 @@
+@* Areas/Admin/Views/Dashboard/Index.cshtml *@
+@{
+    ViewData["Title"] = "Trang quản trị";
+}
+
+<partial name="_AdminNav" />
+
+<div class="max-w-5xl mx-auto p-6">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Trang quản trị Admin</h2>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <a href="/Admin/Category"
+           class="block bg-white rounded-lg shadow p-6 hover:shadow-md transition border-l-4 border-green-500">
+            <h3 class="text-lg font-semibold text-gray-800 mb-1">Quản lý Danh mục</h3>
+            <p class="text-sm text-gray-500">Thêm, sửa, xóa danh mục món ăn (UC16).</p>
+        </a>
+
+        <a href="/Admin/Dish"
+           class="block bg-white rounded-lg shadow p-6 hover:shadow-md transition border-l-4 border-indigo-500">
+            <h3 class="text-lg font-semibold text-gray-800 mb-1">Quản lý Món ăn</h3>
+            <p class="text-sm text-gray-500">Thêm, sửa, xóa, tìm kiếm món ăn (UC17–20).</p>
+        </a>
+
+        <a href="/Admin/Table"
+           class="block bg-white rounded-lg shadow p-6 hover:shadow-md transition border-l-4 border-amber-500">
+            <h3 class="text-lg font-semibold text-gray-800 mb-1">Quản lý Bàn ăn</h3>
+            <p class="text-sm text-gray-500">Thêm, xóa bàn và tạo mã QR (UC21–23).</p>
+        </a>
+
+        <a href="/Admin/Statistics"
+           class="block bg-white rounded-lg shadow p-6 hover:shadow-md transition border-l-4 border-rose-500">
+            <h3 class="text-lg font-semibold text-gray-800 mb-1">Thống kê doanh thu</h3>
+            <p class="text-sm text-gray-500">Doanh thu theo thời gian & món bán chạy (UC24).</p>
+        </a>
+
+        <a href="/Admin/Promotion"
+           class="block bg-white rounded-lg shadow p-6 hover:shadow-md transition border-l-4 border-purple-500">
+            <h3 class="text-lg font-semibold text-gray-800 mb-1">Khuyến mãi</h3>
+            <p class="text-sm text-gray-500">Tạo sự kiện giảm giá theo % sản phẩm (UC25).</p>
+        </a>
+    </div>
+</div>

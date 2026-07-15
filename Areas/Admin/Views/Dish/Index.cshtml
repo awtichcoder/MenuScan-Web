@@ -1,0 +1,280 @@
+@* Areas/Admin/Views/Dish/Index.cshtml *@
+@using MenuQr.Areas.Admin.Models
+@{
+    ViewData["Title"] = "Quản lý Món ăn";
+    var categories = ViewBag.Categories as List<Category> ?? new List<Category>();
+}
+
+<partial name="_AdminNav" />
+
+<div class="max-w-5xl mx-auto p-6">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-gray-800">Quản lý Món ăn</h2>
+        <button type="button" onclick="openForm()"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            + Thêm món
+        </button>
+    </div>
+
+    <div id="alertBox" class="hidden mb-4 px-4 py-3 rounded text-sm"></div>
+
+    <!-- Thanh tìm kiếm / lọc -->
+    <div class="flex flex-wrap gap-3 mb-4 bg-white rounded-lg shadow p-3">
+        <input type="text" id="searchKeyword" placeholder="Tìm theo tên món..."
+               class="flex-1 min-w-[180px] rounded border p-2 text-sm" oninput="debouncedLoad()">
+        <select id="filterCategory" class="rounded border p-2 text-sm" onchange="loadDishes(1)">
+            <option value="">-- Tất cả danh mục --</option>
+            @foreach (var c in categories)
+            {
+                <option value="@c.Id">@c.Name</option>
+            }
+        </select>
+        <select id="sortBy" class="rounded border p-2 text-sm" onchange="loadDishes(1)">
+            <option value="name">Sắp theo tên</option>
+            <option value="price">Sắp theo giá</option>
+        </select>
+    </div>
+
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 text-gray-600 text-left">
+                <tr>
+                    <th class="px-4 py-3">Ảnh</th>
+                    <th class="px-4 py-3">Tên món</th>
+                    <th class="px-4 py-3">Danh mục</th>
+                    <th class="px-4 py-3">Giá</th>
+                    <th class="px-4 py-3">Trạng thái</th>
+                    <th class="px-4 py-3 text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="dishTableBody" class="divide-y divide-gray-100">
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Đang tải...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="pager" class="flex justify-center gap-2 mt-4"></div>
+</div>
+
+<!-- Modal thêm/sửa món -->
+<div id="formModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 my-8">
+        <h3 id="formTitle" class="text-xl font-bold text-gray-800 mb-4">Thêm món</h3>
+        <input type="hidden" id="EditId" value="" />
+        <input type="hidden" id="ImageUrl" value="" />
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Tên món *</label>
+                <input type="text" id="Name" class="mt-1 block w-full rounded-md border p-2">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Danh mục *</label>
+                <select id="CategorySelect" class="mt-1 block w-full rounded-md border p-2">
+                    <option value="">-- Chọn danh mục --</option>
+                    @foreach (var c in categories)
+                    {
+                        <option value="@c.Id" data-name="@c.Name">@c.Name</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Giá gốc (VND) *</label>
+                <input type="number" id="BasePrice" value="50000" min="0" class="mt-1 block w-full rounded-md border p-2">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Giảm giá (%)</label>
+                <input type="number" id="DiscountPercent" value="0" min="0" max="100" class="mt-1 block w-full rounded-md border p-2">
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Ảnh món</label>
+            <input type="file" id="ImageFile" accept=".jpg,.jpeg,.png,.webp" onchange="uploadImage()"
+                   class="block w-full text-sm text-gray-500">
+            <p id="uploadStatus" class="text-xs text-gray-500 mt-1">Chọn ảnh để tự động upload...</p>
+            <img id="ImagePreview" class="hidden mt-2 h-24 rounded border object-cover" />
+        </div>
+
+        <label class="flex items-center gap-2 text-sm text-gray-700 mt-4">
+            <input type="checkbox" id="IsAvailable" checked class="rounded"> Đang bán
+        </label>
+
+        <div class="flex justify-end gap-3 mt-6">
+            <button type="button" onclick="closeForm()" class="px-4 py-2 rounded-md border text-gray-600 text-sm">Hủy</button>
+            <button type="button" onclick="submitForm()" class="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium">Lưu</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const BASE = '/Admin/Dish';
+    let currentPage = 1;
+
+    function showAlert(msg, ok = true) {
+        const box = document.getElementById('alertBox');
+        box.textContent = msg;
+        box.className = 'mb-4 px-4 py-3 rounded text-sm ' + (ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
+        box.classList.remove('hidden');
+        setTimeout(() => box.classList.add('hidden'), 4000);
+    }
+    function esc(s) {
+        return (s ?? '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function money(n) { return (n ?? 0).toLocaleString('vi-VN') + 'đ'; }
+
+    let debounceTimer;
+    function debouncedLoad() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => loadDishes(1), 350);
+    }
+
+    async function loadDishes(page = 1) {
+        currentPage = page;
+        const kw = document.getElementById('searchKeyword').value;
+        const cat = document.getElementById('filterCategory').value;
+        const sort = document.getElementById('sortBy').value;
+        const body = document.getElementById('dishTableBody');
+        const url = `${BASE}/List?keyword=${encodeURIComponent(kw)}&categoryId=${cat}&sort=${sort}&page=${page}&limit=10`;
+        try {
+            const res = await fetch(url);
+            const json = await res.json();
+            const list = json.data || [];
+            if (list.length === 0) {
+                body.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Không có món nào.</td></tr>`;
+                document.getElementById('pager').innerHTML = '';
+                return;
+            }
+            body.innerHTML = list.map(d => `
+                <tr>
+                    <td class="px-4 py-2">${d.imageUrl ? `<img src="${esc(d.imageUrl)}" class="h-10 w-10 rounded object-cover">` : '<span class="text-gray-300">—</span>'}</td>
+                    <td class="px-4 py-2 font-medium text-gray-800">${esc(d.name)}</td>
+                    <td class="px-4 py-2 text-gray-500">${esc(d.categoryName)}</td>
+                    <td class="px-4 py-2">${money(d.basePrice)}</td>
+                    <td class="px-4 py-2">${d.isAvailable ? '<span class="text-green-600">Đang bán</span>' : '<span class="text-gray-400">Ngừng</span>'}</td>
+                    <td class="px-4 py-2 text-right whitespace-nowrap">
+                        <button onclick='editDish(${JSON.stringify(d)})' class="text-blue-600 hover:underline mr-3">Sửa</button>
+                        <button onclick="deleteDish('${d.id}')" class="text-red-600 hover:underline">Xóa</button>
+                    </td>
+                </tr>`).join('');
+            renderPager(json.totalPages || 1, page);
+        } catch (e) {
+            body.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-red-500">Lỗi tải dữ liệu.</td></tr>`;
+        }
+    }
+
+    function renderPager(totalPages, page) {
+        const pager = document.getElementById('pager');
+        if (totalPages <= 1) { pager.innerHTML = ''; return; }
+        let html = '';
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<button onclick="loadDishes(${i})" class="px-3 py-1 rounded text-sm ${i === page ? 'bg-indigo-600 text-white' : 'bg-white border text-gray-600'}">${i}</button>`;
+        }
+        pager.innerHTML = html;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => loadDishes(1));
+
+    function resetForm() {
+        document.getElementById('EditId').value = '';
+        document.getElementById('ImageUrl').value = '';
+        document.getElementById('Name').value = '';
+        document.getElementById('CategorySelect').value = '';
+        document.getElementById('BasePrice').value = 50000;
+        document.getElementById('DiscountPercent').value = 0;
+        document.getElementById('IsAvailable').checked = true;
+        document.getElementById('ImageFile').value = '';
+        document.getElementById('uploadStatus').textContent = 'Chọn ảnh để tự động upload...';
+        document.getElementById('ImagePreview').classList.add('hidden');
+    }
+
+    function openForm() {
+        resetForm();
+        document.getElementById('formTitle').textContent = 'Thêm món';
+        document.getElementById('formModal').classList.remove('hidden');
+    }
+
+    function editDish(d) {
+        resetForm();
+        document.getElementById('EditId').value = d.id;
+        document.getElementById('Name').value = d.name;
+        document.getElementById('CategorySelect').value = d.categoryId || '';
+        document.getElementById('BasePrice').value = d.basePrice;
+        document.getElementById('DiscountPercent').value = d.discountPercent;
+        document.getElementById('IsAvailable').checked = d.isAvailable;
+        if (d.imageUrl) {
+            document.getElementById('ImageUrl').value = d.imageUrl;
+            const p = document.getElementById('ImagePreview');
+            p.src = d.imageUrl; p.classList.remove('hidden');
+        }
+        document.getElementById('formTitle').textContent = 'Sửa món';
+        document.getElementById('formModal').classList.remove('hidden');
+    }
+
+    function closeForm() { document.getElementById('formModal').classList.add('hidden'); }
+
+    async function uploadImage() {
+        const file = document.getElementById('ImageFile').files[0];
+        if (!file) return;
+        const status = document.getElementById('uploadStatus');
+        status.textContent = 'Đang upload...';
+        const fd = new FormData();
+        fd.append('file', file);
+        try {
+            const res = await fetch(`${BASE}/UploadImage`, { method: 'POST', body: fd });
+            const json = await res.json();
+            if (res.ok && json.url) {
+                document.getElementById('ImageUrl').value = json.url;
+                const p = document.getElementById('ImagePreview');
+                p.src = json.url; p.classList.remove('hidden');
+                status.textContent = 'Upload thành công.';
+            } else {
+                status.textContent = json.message || 'Upload thất bại.';
+            }
+        } catch (e) {
+            status.textContent = 'Lỗi upload.';
+        }
+    }
+
+    async function submitForm() {
+        const id = document.getElementById('EditId').value;
+        const sel = document.getElementById('CategorySelect');
+        const data = {
+            Name: document.getElementById('Name').value,
+            CategoryId: sel.value,
+            CategoryName: sel.options[sel.selectedIndex]?.dataset.name || '',
+            BasePrice: parseFloat(document.getElementById('BasePrice').value) || 0,
+            DiscountPercent: parseInt(document.getElementById('DiscountPercent').value) || 0,
+            IsAvailable: document.getElementById('IsAvailable').checked,
+            ImageUrl: document.getElementById('ImageUrl').value,
+            Specifications: []
+        };
+        const url = id ? `${BASE}/UpdateApi?id=${id}` : `${BASE}/CreateApi`;
+        const method = id ? 'PUT' : 'POST';
+        try {
+            const res = await fetch(url, {
+                method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (res.ok) {
+                closeForm();
+                showAlert(json.message || 'Thành công', true);
+                loadDishes(currentPage);
+            } else {
+                showAlert(json.message || 'Có lỗi xảy ra', false);
+            }
+        } catch (e) { showAlert('Lỗi kết nối mạng', false); }
+    }
+
+    async function deleteDish(id) {
+        if (!confirm('Bạn chắc chắn muốn xóa món này?')) return;
+        try {
+            const res = await fetch(`${BASE}/DeleteApi?id=${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (res.ok) { showAlert(json.message || 'Đã xóa', true); loadDishes(currentPage); }
+            else { showAlert(json.message || 'Không thể xóa', false); }
+        } catch (e) { showAlert('Lỗi kết nối mạng', false); }
+    }
+</script>
+}
