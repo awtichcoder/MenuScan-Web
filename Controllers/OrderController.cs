@@ -107,6 +107,7 @@ namespace MenuQr.Controllers
 
                     // 1. LƯU BẢNG Orders
                     var sqlOrder = new Order { // Giả sử class Model SQL của bạn tên là Order
+                        OrderId = orderIdMongo,
                         TableNumber = orderMongo.TableNumber,
                         OrderType = "DineIn",
                         Status = "Completed",
@@ -136,7 +137,7 @@ namespace MenuQr.Controllers
 
                     // 3. LƯU BẢNG Invoices
                     var invoice = new Invoice {
-                        OrderId = sqlOrder.OrderId,
+                       OrderId = sqlOrder.OrderId.ToString(),
                         SubTotal = subTotal,
                         TotalDiscount = 0,
                         FinalAmount = subTotal,
@@ -268,7 +269,7 @@ namespace MenuQr.Controllers
                         // 2.3 Tạo Hóa đơn (Invoices)
                         var sqlInvoice = new Invoice
                         {
-                            OrderId = sqlOrder.OrderId,
+                            OrderId = sqlOrder.OrderId.ToString(),
                             CashierId = null, // VNPAY nên không qua thu ngân
                             SubTotal = subTotal,
                             TotalDiscount = 0, 

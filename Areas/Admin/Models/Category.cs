@@ -4,6 +4,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace MenuQr.Areas.Admin.Models
 {
+    [BsonIgnoreExtraElements]
     public class Category
     {
         [BsonId]

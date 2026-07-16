@@ -1,0 +1,323 @@
+@model MenuQr.Areas.Staff.Controllers.StaffDashboardViewModel
+@{
+    ViewData["Title"] = "Quản lý phục vụ";
+    Layout = "~/Areas/Staff/Views/Shared/_StaffLayout.cshtml";
+}
+
+<div
+    class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
+    <div>
+        <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <i class="fa-solid fa-gauge-high text-blue-600"></i> BẢNG ĐIỀU KHIỂN
+        </h1>
+        <p class="text-sm text-gray-500 mt-1">Quản lý tình trạng bàn và theo dõi order.</p>
+    </div>
+    <div class="mt-3 sm:mt-0">
+        <span
+            class="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 flex items-center gap-2">
+            <i class="fa-solid fa-user-tag text-gray-500"></i> Ca làm việc: <strong>@ViewBag.StaffName</strong>
+        </span>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <div class="lg:col-span-7">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div
+                class="bg-gray-900 text-white px-5 py-4 flex flex-wrap gap-2 justify-between items-center border-b border-gray-800">
+                <h2 class="font-bold text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-table-cells"></i> Sơ đồ bàn ăn
+                </h2>
+                <div class="flex gap-2 text-xs font-bold uppercase tracking-wide">
+                    <span class="bg-green-500 text-white px-2.5 py-1 rounded-md">Trống</span>
+                    <span class="bg-red-500 text-white px-2.5 py-1 rounded-md">Có khách</span>
+                </div>
+            </div>
+
+            <div class="p-5 bg-gray-50">
+                <div id="table-grid-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    @foreach (var table in Model.Tables)
+                    {
+                        var activeOrder = Model.ActiveOrders.FirstOrDefault(o => o.TableNumber == table.TableNumber);
+                        bool hasCustomer = activeOrder != null;
+
+                        <div onclick="viewOrderDetails('@table.TableNumber', '@(hasCustomer ? activeOrder.Id.ToString() : "")')"
+                             class="relative cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-md rounded-2xl p-4 border-2 flex flex-col items-center text-center bg-white
+                            @(hasCustomer ? "border-red-300" : "border-green-300")">
+
+                            <h3 class="font-bold text-gray-800 text-lg mb-1">@table.Name</h3>
+                            <p class="text-xs text-gray-500 font-mono mb-4 bg-gray-100 px-2 py-0.5 rounded">Mã:
+                                @table.TableNumber</p>
+
+                                <div class="mt-auto w-full">
+                                    @if (hasCustomer)
+                                    {
+                                        <span
+                                            class="inline-block bg-red-100 text-red-700 border border-red-200 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm">
+                                            <i class="fa-solid fa-bell mr-1"></i> Có khách
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span
+                                            class="inline-block bg-green-100 text-green-700 border border-green-200 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm">
+                                            <i class="fa-solid fa-check mr-1"></i> Trống
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-5">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-20">
+                <div class="bg-blue-600 text-white px-5 py-4">
+                    <h2 class="font-bold text-lg flex items-center gap-2">
+                        <i class="fa-solid fa-receipt"></i> Chi tiết Order
+                    </h2>
+                </div>
+
+                <div id="detail-panel" class="p-8 min-h-[400px] flex items-center justify-center bg-gray-50">
+                    <div class="text-center text-gray-400">
+                        <i class="fa-solid fa-hand-pointer text-5xl mb-4 block opacity-40"></i>
+                        <p class="text-sm font-medium">Nhấp chọn một bàn bên trái<br>để xem chi tiết món ăn & thanh toán.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Mảng lưu vết các hóa đơn đã in tự động để tránh bị tải xuống trùng lặp
+        let processedOrders = [];
+
+        // ==========================================
+        // 1. HÀM LOAD CHI TIẾT MÓN ĂN & TÍNH TỔNG TIỀN
+        // ==========================================
+        async function viewOrderDetails(tableNumber, orderId) {
+            let panel = document.getElementById('detail-panel');
+
+            if (!orderId) {
+                panel.innerHTML = `
+                    <div class="text-center w-full">
+                        <div class="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-green-200">
+                            <i class="fa-solid fa-check text-4xl"></i>
+                        </div>
+                        <h4 class="text-gray-800 font-bold text-xl mb-1">Bàn ${tableNumber} đang trống</h4>
+                        <p class="text-gray-500 text-sm mb-6">Chưa có khách ngồi hoặc chưa lên order.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            panel.innerHTML = `
+                <div class="text-center w-full">
+                    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-4"></i>
+                    <p class="text-gray-500 font-medium text-sm">Đang tải hóa đơn bàn ${tableNumber}...</p>
+                </div>
+            `;
+
+            try {
+                let response = await fetch(`/Staff/Staff/GetOrderDetails?orderId=${orderId}`);
+                let order = await response.json();
+
+                let itemsList = order.items || order.Items || order.orderDetails || order.OrderDetails || [];
+                let itemsHtml = '';
+                let calculatedTotal = 0;
+
+                if (itemsList.length > 0) {
+                    itemsHtml = itemsList.map((i, index) => {
+                        let name = i.DishName || i.dishName || i.Name || i.name || 'Món ăn';
+                        let price = i.FinalPrice || i.finalPrice || i.BasePrice || i.basePrice || i.Price || i.price || 0;
+                        let qty = i.Quantity || i.quantity || 1;
+                        calculatedTotal += (price * qty);
+
+                        // 1. XỬ LÝ HIỂN THỊ OPTIONS ĐẸP MẮT (Bắt lỗi JSON thô)
+                        let optionsHtml = '';
+                        let opts = i.SelectedOptions || i.selectedOptions;
+                        if (opts && Array.isArray(opts) && opts.length > 0) {
+                            let optTexts = opts.map(o => {
+                                // Nếu nó lỡ bị biến thành chuỗi JSON, ép nó về object lại
+                                if (typeof o === 'string' && o.startsWith('{')) {
+                                    try { o = JSON.parse(o); } catch (e) { }
+                                }
+
+                                if (typeof o === 'object') {
+                                    // Lấy tên tuỳ chọn (bắt cả chữ hoa lẫn thường)
+                                    let optName = o.name || o.Name || o.OptionName || o.value || o.Value || '';
+                                    // Lấy giá phụ thu (nếu có)
+                                    let optPrice = o.extraPrice || o.ExtraPrice || 0;
+
+                                    // Nếu có cộng thêm tiền thì hiển thị ra luôn (VD: +10.000đ)
+                                    if (optPrice > 0) {
+                                        return `${optName} (+${optPrice.toLocaleString('vi-VN')}đ)`;
+                                    }
+                                    return optName;
+                                }
+                                return o;
+                            });
+
+                            // Lọc bỏ chuỗi rỗng và nối các tuỳ chọn lại bằng dấu chấm tròn
+                            let cleanOpts = optTexts.filter(t => t !== '').join(' • ');
+                            if (cleanOpts) {
+                                optionsHtml = `<p class="text-[11.5px] text-gray-500 font-medium mt-0.5"><i class="fa-solid fa-tags text-[10px] mr-1"></i> ${cleanOpts}</p>`;
+                            }
+                        }
+
+                        // 2. XỬ LÝ HIỂN THỊ GHI CHÚ CÓ NÚT ẨN/HIỆN
+                        let noteHtml = '';
+                        let note = i.Note || i.note || i.ItemNote || i.itemNote;
+                        if (note && note.trim() !== '') {
+                            let noteId = `note-${index}-${Date.now()}`; // Tạo ID ngẫu nhiên không trùng lặp
+                            noteHtml = `
+                                <div class="mt-1.5">
+                                    <button onclick="document.getElementById('${noteId}').classList.toggle('hidden')" class="text-[11px] text-orange-600 font-bold bg-orange-50 hover:bg-orange-100 border border-orange-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5">
+                                        <i class="fa-regular fa-comment-dots"></i> Xem ghi chú của khách
+                                    </button>
+                                    <div id="${noteId}" class="hidden mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800 italic shadow-sm">
+                                        <span class="font-bold">Ghi chú:</span> ${note}
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        return `
+                            <div class="flex justify-between items-start py-3 border-b border-gray-100 text-left">
+                                <div class="flex-1 pr-3">
+                                    <p class="font-bold text-gray-800 text-base">${name}</p>
+                                    <p class="text-xs text-gray-500 mb-0.5">SL: ${qty} x ${price.toLocaleString('vi-VN')}đ</p>
+                                    ${optionsHtml}
+                                    ${noteHtml}
+                                </div>
+                                <p class="font-bold text-blue-600 whitespace-nowrap pt-1 text-base">${(price * qty).toLocaleString('vi-VN')}đ</p>
+                            </div>`;
+                    }).join('');
+                } else {
+                    itemsHtml = '<div class="text-center text-gray-400 py-8"><i class="fa-solid fa-box-open text-3xl mb-2 block opacity-30"></i> Chưa có món nào.</div>';
+                }
+
+                panel.innerHTML = `
+                    <div class="w-full h-full flex flex-col text-left">
+                        <div class="flex justify-between items-center mb-4 border-b pb-2">
+                            <h3 class="font-bold text-xl text-gray-800">Bàn ${tableNumber}</h3>
+                            <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold uppercase">${order.status || order.Status}</span>
+                        </div>
+    
+                        <div class="flex-1 overflow-y-auto pr-2 mb-4 max-h-[300px]">
+                            ${itemsHtml}
+                        </div>
+
+                        <div class="bg-gray-100 p-4 rounded-xl mt-auto">
+                            <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-3">
+                                <span class="text-gray-600 font-medium">Tổng thanh toán:</span>
+                                <span class="text-2xl font-black text-red-600">${calculatedTotal.toLocaleString('vi-VN')} đ</span>
+                            </div>
+        
+                            <button onclick="payOrder('${order.id || order.Id}', '${tableNumber}')" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition shadow-md flex items-center justify-center gap-2 mb-2">
+                                <i class="fa-solid fa-print text-lg"></i> <span class="tracking-wide">XÁC NHẬN THANH TOÁN & IN BILL</span>
+                            </button>
+                
+                            <button onclick="printInvoice('${order.id || order.Id}')" class="w-full bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 font-bold py-2 rounded-xl transition text-xs flex items-center justify-center gap-1 mt-1">
+                                <i class="fa-solid fa-redo"></i> In lại hóa đơn
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error(error);
+                panel.innerHTML = `<p class="text-red-500 text-center">Lỗi tải dữ liệu. Vui lòng thử lại!</p>`;
+            }
+        }
+
+        // ==========================================
+        // 2. NHÂN VIÊN BẤM THANH TOÁN (TẠI QUẦY)
+        // ==========================================
+        async function payOrder(orderId, tableNumber) {
+            if (!confirm(`Xác nhận thanh toán cho Bàn ${tableNumber}?\nHệ thống sẽ dọn bàn và tự động tải file hóa đơn.`)) return;
+
+            let formData = new FormData();
+            formData.append("orderId", orderId);
+            formData.append("paymentMethod", "Tại quầy");
+
+            try {
+                let res = await fetch('/Staff/Staff/Checkout', { method: 'POST', body: formData });
+                let data = await res.json();
+
+                if (data.success) {
+                    // Tự động kích hoạt tải file hóa đơn PDF về máy thu ngân
+                    window.open(`/Staff/Staff/ExportInvoicePdf?orderId=${orderId}&paymentMethod=${encodeURIComponent("Thanh toán tại quầy")}`, '_blank');
+                    processedOrders.push(orderId); // Lưu vết đã in
+
+                    // Đợi 1.2 giây rồi Reload dọn sạch bàn
+                    setTimeout(() => { window.location.reload(); }, 1200);
+                } else {
+                    alert(data.message);
+                }
+            } catch (e) {
+                alert("Lỗi hệ thống khi thanh toán!");
+            }
+        }
+
+        // Nút in lại thủ công
+        function printInvoice(orderId) {
+            window.open(`/Staff/Staff/ExportInvoicePdf?orderId=${orderId}&paymentMethod=In lại`, '_blank');
+        }
+
+        // ==========================================
+        // 3. AUTO REALTIME & TỰ ĐỘNG IN KHI KHÁCH THANH TOÁN ONLINE
+        // ==========================================
+        let isFirstLoad = true; // Biến cờ kiểm tra lần đầu load trang
+
+        setInterval(async () => {
+            try {
+                // A. Cập nhật màu sắc sơ đồ bàn ngầm
+                let res = await fetch(window.location.href);
+                let text = await res.text();
+                let doc = new DOMParser().parseFromString(text, 'text/html');
+                let newGrid = doc.getElementById('table-grid-container');
+                let oldGrid = document.getElementById('table-grid-container');
+
+                if (newGrid && oldGrid) {
+                    oldGrid.innerHTML = newGrid.innerHTML;
+                }
+
+                // B. QUÉT ĐƠN VNPAY ONLINE & VƯỢT RÀO CHẶN POPUP CỦA TRÌNH DUYỆT
+                let apiRes = await fetch('/Staff/Staff/GetUnprintedPayments');
+                if (apiRes.ok) {
+                    let onlineOrders = await apiRes.json();
+
+                    if (isFirstLoad) {
+                        // Lần đầu load trang: Ghi nhớ các đơn đã Completed cũ, KHÔNG TẢI XUỐNG để tránh spam
+                        onlineOrders.forEach(o => {
+                            if (!processedOrders.includes(o.id)) processedOrders.push(o.id);
+                        });
+                        isFirstLoad = false;
+                    } else {
+                        // Từ lần thứ 2 trở đi (nghĩa là đang trực quầy): Phát hiện đơn mới là tải ngay
+                        onlineOrders.forEach(order => {
+                            if (!processedOrders.includes(order.id)) {
+                                console.log("Phát hiện đơn Online mới, tự động tải hóa đơn: ", order.id);
+                                processedOrders.push(order.id); // Đánh dấu để không tải trùng
+
+                                // CÁCH MỚI: Tải file ngầm không bị trình duyệt chặn
+                                let downloadLink = document.createElement('a');
+                                downloadLink.href = `/Staff/Staff/ExportInvoicePdf?orderId=${order.id}&paymentMethod=${encodeURIComponent("Thanh toán qua VNPay")}`;
+                                downloadLink.style.display = 'none';
+                                document.body.appendChild(downloadLink);
+                                downloadLink.click();
+                                document.body.removeChild(downloadLink);
+                            }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.log("Đang chờ đồng bộ dữ liệu...");
+            }
+        }, 5000); // 5 giây quét 1 lần
+    </script>

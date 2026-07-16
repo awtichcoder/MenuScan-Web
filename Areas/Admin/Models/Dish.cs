@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace MenuQr.Areas.Admin.Models
 {
+    [BsonIgnoreExtraElements]
     public class Dish
     {
         [BsonId]
