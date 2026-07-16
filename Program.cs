@@ -2,6 +2,9 @@ using MongoDB.Driver;
 using CloudinaryDotNet;
 using MenuQr.Hubs;
 using MenuQr.Data;
+using MenuQr.Models; // Thêm dòng này để gọi class trong thư mục Models
+using MenuQr;
+using PdfSharp.Fonts;
 using Microsoft.EntityFrameworkCore; // Nhớ thêm using này để dùng được UseSqlServer
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,7 +56,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // LỆNH BUILD BẮT BUỘC NẰM Ở ĐÂY
 // =======================================================
 var app = builder.Build();
-
+// hoa doj
+GlobalFontSettings.FontResolver = new CustomFontResolver();
 
 // 4. CONFIGURE THE HTTP REQUEST PIPELINE
 if (!app.Environment.IsDevelopment())

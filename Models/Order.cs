@@ -5,7 +5,7 @@ namespace MenuQr.Models;
 
 public partial class Order
 {
-    public int OrderId { get; set; }
+    public string OrderId { get; set; } = null!;
 
     public string? TableNumber { get; set; }
 
