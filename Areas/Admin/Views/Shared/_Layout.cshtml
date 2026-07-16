@@ -27,34 +27,34 @@
             </div>
 
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-                <a href="/Admin"
+                <a href="/Admin/Revenue/Index"
                    class="flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-[#F3C178] transition-colors">
                     <i class="fa-solid fa-chart-pie w-5 text-center"></i>
                     <span class="font-medium">Tổng quan</span>
                 </a>
 
-                <a asp-area="Admin" asp-controller="Admin" asp-action="Tables"
+                <a asp-area="Admin" asp-controller="Table" asp-action="Index"
                    class="flex items-center gap-3 px-4 py-3 bg-[#F3C178]/10 text-[#F3C178] rounded-xl font-bold transition-colors">
                     <i class="fa-solid fa-qrcode w-5 text-center"></i>
                     <span>Quản lý Bàn / QR</span>
                 </a>
 
-                <a href="#"
+                <a href="/Admin/Category/Index"
                    class="flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-[#F3C178] transition-colors">
                     <i class="fa-solid fa-layer-group w-5 text-center"></i>
                     <span class="font-medium">Danh mục món</span>
                 </a>
 
-                <a href="#"
+                <a href="/Admin/Dish/Index"
                    class="flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-[#F3C178] transition-colors">
                     <i class="fa-solid fa-burger w-5 text-center"></i>
                     <span class="font-medium">Thực đơn</span>
                 </a>
 
-                <a href="#"
+                <a href="/Admin/Promotion/Index"
                    class="flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-[#F3C178] transition-colors">
-                    <i class="fa-solid fa-receipt w-5 text-center"></i>
-                    <span class="font-medium">Hóa đơn</span>
+                    <i class="fa-solid fa-percent w-5 text-center"></i>
+                    <span class="font-medium">Khuyến mãi</span>
                 </a>
             </nav>
 
