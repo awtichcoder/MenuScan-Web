@@ -1,17 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using MenuQr.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace MenuQr.Data;
+namespace MenuQr.Models;
 
-public partial class ApplicationDbContext : DbContext
+public partial class MenuDbContext : DbContext
 {
-    public ApplicationDbContext()
+    public MenuDbContext()
     {
     }
 
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+    public MenuDbContext(DbContextOptions<MenuDbContext> options)
         : base(options)
     {
     }
@@ -32,11 +31,12 @@ public partial class ApplicationDbContext : DbContext
     {
         modelBuilder.Entity<Invoice>(entity =>
         {
-            entity.HasKey(e => e.InvoiceId).HasName("PK__Invoices__D796AAB5BC45CBA0");
+            entity.HasKey(e => e.InvoiceId).HasName("PK__Invoices__D796AAB5C07AD105");
 
-            entity.HasIndex(e => e.OrderId, "UQ__Invoices__C3905BCE056715A2").IsUnique();
+            entity.HasIndex(e => e.OrderId, "UQ__Invoices__C3905BCE32AEA8AE").IsUnique();
 
             entity.Property(e => e.FinalAmount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.OrderId).HasMaxLength(50);
             entity.Property(e => e.PaidAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
@@ -49,18 +49,19 @@ public partial class ApplicationDbContext : DbContext
 
             entity.HasOne(d => d.Cashier).WithMany(p => p.Invoices)
                 .HasForeignKey(d => d.CashierId)
-                .HasConstraintName("FK__Invoices__Cashie__45F365D3");
+                .HasConstraintName("FK__Invoices__Cashie__30C33EC3");
 
-            // entity.HasOne(d => d.Order).WithOne(p => p.Invoice)
-            //     .HasForeignKey<Invoice>(d => d.OrderId)
-            //     .OnDelete(DeleteBehavior.ClientSetNull)
-            //     .HasConstraintName("FK__Invoices__OrderI__44FF419A");
+            entity.HasOne(d => d.Order).WithOne(p => p.Invoice)
+                .HasForeignKey<Invoice>(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__Invoices__OrderI__31B762FC");
         });
 
         modelBuilder.Entity<Order>(entity =>
         {
-            entity.HasKey(e => e.OrderId).HasName("PK__Orders__C3905BCF4A21C079");
+            entity.HasKey(e => e.OrderId).HasName("PK__Orders__C3905BCFDAE3A83B");
 
+            entity.Property(e => e.OrderId).HasMaxLength(50);
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
@@ -75,7 +76,7 @@ public partial class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<OrderDetail>(entity =>
         {
-            entity.HasKey(e => e.OrderDetailId).HasName("PK__OrderDet__D3B9D36CC9B912ED");
+            entity.HasKey(e => e.OrderDetailId).HasName("PK__OrderDet__D3B9D36C2E99DACB");
 
             entity.Property(e => e.BasePrice).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CategoryName).HasMaxLength(100);
@@ -84,19 +85,20 @@ public partial class ApplicationDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.DishName).HasMaxLength(255);
             entity.Property(e => e.ItemNote).HasMaxLength(500);
+            entity.Property(e => e.OrderId).HasMaxLength(50);
             entity.Property(e => e.PriceAfterDiscount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.TotalToppingPrice).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrderDetails)
                 .HasForeignKey(d => d.OrderId)
-                .HasConstraintName("FK__OrderDeta__Order__3F466844");
+                .HasConstraintName("FK__OrderDeta__Order__2B0A656D");
         });
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.UserId).HasName("PK__Users__1788CC4CCC4AE888");
+            entity.HasKey(e => e.UserId).HasName("PK__Users__1788CC4C0505D72E");
 
-            entity.HasIndex(e => e.Username, "UQ__Users__536C85E4F00CF833").IsUnique();
+            entity.HasIndex(e => e.Username, "UQ__Users__536C85E4D5AD85F0").IsUnique();
 
             entity.Property(e => e.FullName).HasMaxLength(255);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
