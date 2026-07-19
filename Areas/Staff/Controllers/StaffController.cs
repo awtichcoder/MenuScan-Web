@@ -10,10 +10,12 @@ using PdfSharp.Drawing;
 using System.IO;
 using System;
 using MenuQr.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace MenuQr.Areas.Staff.Controllers
 {
     [Area("Staff")] 
+    [Authorize(Roles = "Admin,Staff")]
     public class StaffController : Controller
     {
         private readonly ApplicationDbContext _sqlContext;  

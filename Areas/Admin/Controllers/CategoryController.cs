@@ -1,6 +1,7 @@
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using MenuQr.Areas.Admin.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -8,6 +9,7 @@ using MongoDB.Driver;
 namespace MenuQr.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = "Admin")]
     public class CategoryController : Controller
     {
         private readonly IMongoCollection<Category> _categoryCollection;
@@ -43,6 +45,19 @@ namespace MenuQr.Areas.Admin.Controllers
         public IActionResult Create()
         {
             return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Edit(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest("Thieu ma danh muc.");
+
+            var category = await _categoryCollection.Find(c => c.Id == id && c.IsActive).FirstOrDefaultAsync();
+            if (category == null)
+                return NotFound("Khong tim thay danh muc.");
+
+            return View(category);
         }
 
         [HttpGet("/api/admin/categories")]
@@ -134,6 +149,53 @@ namespace MenuQr.Areas.Admin.Controllers
         public Task<IActionResult> UpdateApi(string id, [FromBody] Category model)
         {
             return UpdateCategory(id, model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> EditApi(string id, [FromForm] CategoryUploadModel model)
+        {
+            var existing = await _categoryCollection.Find(c => c.Id == id && c.IsActive).FirstOrDefaultAsync();
+            if (existing == null)
+                return NotFound(new { success = false, code = "MS05", message = "Khong tim thay danh muc." });
+
+            var validation = await ValidateCategory(model.Name, id);
+            if (validation != null) return validation;
+
+            try
+            {
+                var imageUrl = existing.ImageUrl ?? "";
+                if (model.ImageFile != null && model.ImageFile.Length > 0)
+                {
+                    using var stream = model.ImageFile.OpenReadStream();
+                    var uploadParams = new ImageUploadParams
+                    {
+                        File = new FileDescription(model.ImageFile.FileName, stream),
+                        Folder = "categories",
+                        Overwrite = true
+                    };
+
+                    var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                    if (uploadResult.Error != null)
+                        return StatusCode(500, new { success = false, code = "MS09", message = uploadResult.Error.Message });
+
+                    imageUrl = uploadResult.SecureUrl.ToString();
+                }
+
+                var update = Builders<Category>.Update
+                    .Set(c => c.Name, model.Name.Trim())
+                    .Set(c => c.Description, model.Description ?? "")
+                    .Set(c => c.DisplayOrder, model.DisplayOrder <= 0 ? 1 : model.DisplayOrder)
+                    .Set(c => c.IsActive, model.IsActive)
+                    .Set(c => c.ImageUrl, imageUrl)
+                    .Set(c => c.UpdatedAt, DateTime.Now);
+
+                await _categoryCollection.UpdateOneAsync(c => c.Id == id, update);
+                return Ok(new { success = true, code = "MS06", message = "Cap nhat danh muc thanh cong." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, code = "MS09", message = ex.Message });
+            }
         }
 
         [HttpDelete("/api/admin/categories/{id}")]

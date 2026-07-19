@@ -1,10 +1,12 @@
 using MenuQr.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace MenuQr.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = "Admin")]
     public class RevenueController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
