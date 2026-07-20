@@ -34,7 +34,7 @@ namespace MenuQr.Migrations
                 {
                     InvoiceId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    OrderId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    OrderId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     CashierId = table.Column<int>(type: "int", nullable: true),
                     SubTotal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     TotalDiscount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -57,15 +57,22 @@ namespace MenuQr.Migrations
                 name: "Orders",
                 columns: table => new
                 {
-                    OrderId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    OrderId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     TableNumber = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: true),
                     OrderType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true, defaultValue: "Completed"),
-                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: true, defaultValueSql: "(getdate())")
+                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: true, defaultValueSql: "(getdate())"),
+                    InvoiceId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Orders__C3905BCF4A21C079", x => x.OrderId);
+                    table.ForeignKey(
+                        name: "FK_Orders_Invoices_InvoiceId",
+                        column: x => x.InvoiceId,
+                        principalTable: "Invoices",
+                        principalColumn: "InvoiceId");
                 });
 
             migrationBuilder.CreateTable(
@@ -74,7 +81,7 @@ namespace MenuQr.Migrations
                 {
                     OrderDetailId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    OrderId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    OrderId = table.Column<int>(type: "int", nullable: false),
                     DishId = table.Column<string>(type: "varchar(50)", unicode: false, maxLength: 50, nullable: false),
                     DishName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
                     CategoryName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
@@ -114,18 +121,15 @@ namespace MenuQr.Migrations
                 column: "OrderId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Orders_InvoiceId",
+                table: "Orders",
+                column: "InvoiceId");
+
+            migrationBuilder.CreateIndex(
                 name: "UQ__Users__536C85E4F00CF833",
                 table: "Users",
                 column: "Username",
                 unique: true);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK__Invoices__OrderI__44FF419A",
-                table: "Invoices",
-                column: "OrderId",
-                principalTable: "Orders",
-                principalColumn: "OrderId",
-                onDelete: ReferentialAction.Cascade);
         }
 
         /// <inheritdoc />
@@ -135,10 +139,10 @@ namespace MenuQr.Migrations
                 name: "OrderDetails");
 
             migrationBuilder.DropTable(
-                name: "Invoices");
+                name: "Orders");
 
             migrationBuilder.DropTable(
-                name: "Orders");
+                name: "Invoices");
 
             migrationBuilder.DropTable(
                 name: "Users");

@@ -1,73 +1,75 @@
-﻿using MenuQr.Models;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using PdfSharp.Drawing;
-using PdfSharp.Fonts;
-using PdfSharp.Pdf;
+using MenuQr.Models;
 using QRCoder;
+using PdfSharp.Pdf;
+using PdfSharp.Fonts;
+using PdfSharp.Drawing;
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace MenuQr.Areas.Admin.Controllers
 {
     [Area("Admin")]
-    [Authorize(Roles = "Admin")]
     public class TableController : Controller
     {
         private readonly IMongoCollection<DiningTable> _tableCollection;
-        private readonly IMongoCollection<ActiveOrder> _activeOrderCollection;
 
         public TableController(IMongoDatabase mongoDatabase)
         {
             _tableCollection = mongoDatabase.GetCollection<DiningTable>("DiningTables");
-            _activeOrderCollection = mongoDatabase.GetCollection<ActiveOrder>("ActiveOrders");
-
+            
+            // KÍCH HOẠT FONT CHỮ CHO PDF
             if (GlobalFontSettings.FontResolver == null)
+            {
                 GlobalFontSettings.FontResolver = new CustomFontResolver();
+            }
         }
 
+        // 1. Trang danh sách bàn
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var tables = await _tableCollection.Find(t => t.IsActive).SortBy(t => t.TableNumber).ToListAsync();
+            var tables = await _tableCollection.Find(t => t.IsActive).ToListAsync();
+            
             var qrList = new Dictionary<string, string>();
             var linkList = new Dictionary<string, string>();
 
             foreach (var table in tables)
             {
-                var orderUrl = BuildOrderUrl(table.TableNumber);
+                string orderUrl = $"{Request.Scheme}://{Request.Host}/Home/?tableId={table.TableNumber}";
                 qrList[table.TableNumber] = GenerateQrBase64(orderUrl);
                 linkList[table.TableNumber] = orderUrl;
             }
-
+            
             ViewBag.QrList = qrList;
             ViewBag.LinkList = linkList;
+
             return View(tables);
         }
 
+        // 2. Thêm bàn mới
         [HttpPost]
         public async Task<IActionResult> Create(string tableNumber, string name)
         {
-            if (string.IsNullOrWhiteSpace(tableNumber) || string.IsNullOrWhiteSpace(name))
-                return BadRequest(new { success = false, code = "MS01", message = "Vui lòng nhập mã bàn và tên bàn." });
-
-            tableNumber = tableNumber.Trim();
-            name = name.Trim();
-
-            var existingName = await _tableCollection.Find(t => t.Name == name && t.IsActive).FirstOrDefaultAsync();
-            if (existingName != null)
-                return BadRequest(new { success = false, code = "MS03", message = "Tên bàn này đã tồn tại." });
+            if (string.IsNullOrEmpty(tableNumber) || string.IsNullOrEmpty(name))
+            {
+                return BadRequest("Thiếu thông tin!");
+            }
 
             var existing = await _tableCollection.Find(t => t.TableNumber == tableNumber).FirstOrDefaultAsync();
             if (existing != null)
             {
                 if (!existing.IsActive)
                 {
-                    var update = Builders<DiningTable>.Update.Set(t => t.IsActive, true).Set(t => t.Name, name);
-                    await _tableCollection.UpdateOneAsync(t => t.Id == existing.Id, update);
-                    return Json(new { success = true, code = "MS06", message = "Kích hoạt lại bàn cũ thành công." });
+                    var updateActivate = Builders<DiningTable>.Update.Set(t => t.IsActive, true).Set(t => t.Name, name);
+                    await _tableCollection.UpdateOneAsync(t => t.Id == existing.Id, updateActivate);
+                    return Json(new { success = true, message = "Kích hoạt lại bàn cũ thành công!" });
                 }
-
-                return BadRequest(new { success = false, code = "MS02", message = "Mã bàn này đã tồn tại." });
+                return Json(new { success = false, message = "Mã bàn này đã tồn tại!" });
             }
 
             var table = new DiningTable
@@ -79,151 +81,176 @@ namespace MenuQr.Areas.Admin.Controllers
             };
 
             await _tableCollection.InsertOneAsync(table);
-            return Json(new { success = true, code = "MS06", message = "Thêm bàn thành công." });
+            return Json(new { success = true });
         }
 
-        [HttpPost("/api/admin/tables")]
-        public Task<IActionResult> CreateTable(string tableNumber, string name)
-        {
-            return Create(tableNumber, name);
-        }
-
+        // 3. Xóa mềm bàn
         [HttpPost]
         public async Task<IActionResult> DeleteSoft(string tableNumber)
         {
-            if (string.IsNullOrWhiteSpace(tableNumber))
-                return BadRequest(new { success = false, code = "MS02", message = "Không tìm thấy bàn yêu cầu." });
-
-            var hasActiveOrder = await _activeOrderCollection
-                .Find(o => o.TableNumber == tableNumber && o.Status == "Serving")
-                .AnyAsync();
-
-            if (hasActiveOrder)
-                return BadRequest(new { success = false, code = "MS01", message = "Không thể xóa bàn đang có đơn hàng chưa hoàn tất." });
-
-            var result = await _tableCollection.UpdateOneAsync(
-                t => t.TableNumber == tableNumber && t.IsActive,
-                Builders<DiningTable>.Update.Set(t => t.IsActive, false));
+            var update = Builders<DiningTable>.Update.Set(t => t.IsActive, false);
+            var result = await _tableCollection.UpdateOneAsync(t => t.TableNumber == tableNumber, update);
 
             if (result.ModifiedCount > 0)
-                return Json(new { success = true, code = "MS05", message = "Xóa bàn thành công." });
-
-            return NotFound(new { success = false, code = "MS02", message = "Không tìm thấy bàn yêu cầu." });
+            {
+                return Json(new { success = true });
+            }
+            return Json(new { success = false, message = "Không tìm thấy bàn yêu cầu." });
         }
 
-        [HttpDelete("/api/admin/tables/{tableNumber}")]
-        public Task<IActionResult> DeleteTable(string tableNumber)
-        {
-            return DeleteSoft(tableNumber);
-        }
-
-        [HttpPost("/api/admin/tables/{tableNumber}/qr-code")]
-        public async Task<IActionResult> GenerateQrCode(string tableNumber)
-        {
-            var table = await _tableCollection.Find(t => t.TableNumber == tableNumber && t.IsActive).FirstOrDefaultAsync();
-            if (table == null)
-                return NotFound(new { success = false, code = "MS01", message = "Không tìm thấy bàn." });
-
-            var url = BuildOrderUrl(table.TableNumber);
-            return Ok(new { success = true, code = "MS06", url, qrCode = GenerateQrBase64(url) });
-        }
-
+        // 4. Xuất file PDF cho TẤT CẢ các bàn
         [HttpGet]
         public async Task<IActionResult> ExportPdf()
         {
-            var tables = await _tableCollection.Find(t => t.IsActive).SortBy(t => t.TableNumber).ToListAsync();
+            var tables = await _tableCollection.Find(t => t.IsActive).ToListAsync();
 
-            using var stream = new MemoryStream();
-            var document = new PdfDocument();
-            document.Info.Title = "Danh sach ma QR cac ban";
+            using (var stream = new MemoryStream())
+            {
+                PdfDocument document = new PdfDocument();
+                document.Info.Title = "Danh sach ma QR cac ban";
 
-            foreach (var table in tables)
-                AddQrPdfPage(document, table);
+                foreach (var table in tables)
+                {
+                    PdfPage page = document.AddPage();
+                    page.Width = XUnit.FromMillimeter(100);  
+                    page.Height = XUnit.FromMillimeter(100);
+                    XGraphics gfx = XGraphics.FromPdfPage(page);
 
-            document.Save(stream, false);
-            return File(stream.ToArray(), "application/pdf", "MenuQR_DanhSachBan.pdf");
+                    XPen borderPen = new XPen(XColor.FromArgb(243, 193, 120), 3); 
+                    gfx.DrawRectangle(borderPen, 10, 10, page.Width - 20, page.Height - 20);
+
+                    XFont titleFont = new XFont("Arial", 16, XFontStyleEx.Bold);
+                    XStringFormat format = new XStringFormat { Alignment = XStringAlignment.Center };
+                    gfx.DrawString(table.Name.ToUpper(), titleFont, XBrushes.Black, new XPoint(page.Width / 2, 30), format);
+
+                    // ĐÃ SỬA: Dùng hàm DrawQrCodeVector thay vì nén thành ảnh
+                    string orderUrl = $"{Request.Scheme}://{Request.Host}/Home/?tableId={table.TableNumber}";
+                    DrawQrCodeVector(gfx, orderUrl, (page.Width - 160) / 2, 45, 160);
+
+                    XFont footerFont = new XFont("Arial", 9, XFontStyleEx.Italic);
+                    gfx.DrawString("Quet QR de xem Menu va goi mon", footerFont, XBrushes.Gray, new XPoint(page.Width / 2, page.Height - 20), format);
+                }
+
+                document.Save(stream, false);
+                byte[] fileBytes = stream.ToArray();
+                return File(fileBytes, "application/pdf", "MenuQR_DanhSachBan.pdf");
+            }
         }
 
+        // 5. Xuất file PDF lẻ cho CHỈ 1 BÀN
         [HttpGet]
         public async Task<IActionResult> ExportSinglePdf(string tableNumber)
         {
             var table = await _tableCollection.Find(t => t.TableNumber == tableNumber && t.IsActive).FirstOrDefaultAsync();
-            if (table == null) return NotFound("Không tìm thấy bàn hoạt động.");
+            if (table == null)
+            {
+                return NotFound("Không tìm thấy bàn hoạt động!");
+            }
 
-            using var stream = new MemoryStream();
-            var document = new PdfDocument();
-            document.Info.Title = $"Ma QR - {table.Name}";
-            AddQrPdfPage(document, table);
-            document.Save(stream, false);
-            return File(stream.ToArray(), "application/pdf", $"MenuQR_{table.TableNumber}.pdf");
+            using (var stream = new MemoryStream())
+            {
+                PdfDocument document = new PdfDocument();
+                document.Info.Title = $"Ma QR - {table.Name}";
+
+                PdfPage page = document.AddPage();
+                page.Width = XUnit.FromMillimeter(100);  
+                page.Height = XUnit.FromMillimeter(100);
+                XGraphics gfx = XGraphics.FromPdfPage(page);
+
+                XPen borderPen = new XPen(XColor.FromArgb(243, 193, 120), 3);
+                gfx.DrawRectangle(borderPen, 10, 10, page.Width - 20, page.Height - 20);
+
+                XFont titleFont = new XFont("Arial", 16, XFontStyleEx.Bold);
+                XStringFormat format = new XStringFormat { Alignment = XStringAlignment.Center };
+                gfx.DrawString(table.Name.ToUpper(), titleFont, XBrushes.Black, new XPoint(page.Width / 2, 30), format);
+
+                // ĐÃ SỬA: Dùng hàm DrawQrCodeVector thay vì nén thành ảnh
+                string orderUrl = $"{Request.Scheme}://{Request.Host}/Home/?tableId={table.TableNumber}";
+                DrawQrCodeVector(gfx, orderUrl, (page.Width - 160) / 2, 45, 160);
+
+                XFont footerFont = new XFont("Arial", 9, XFontStyleEx.Italic);
+                gfx.DrawString("Quet QR de xem Menu va goi mon", footerFont, XBrushes.Gray, new XPoint(page.Width / 2, page.Height - 20), format);
+
+                document.Save(stream, false);
+                byte[] fileBytes = stream.ToArray();
+                return File(fileBytes, "application/pdf", $"MenuQR_{table.TableNumber}.pdf");
+            }
         }
 
-        private void AddQrPdfPage(PdfDocument document, DiningTable table)
-        {
-            var page = document.AddPage();
-            page.Width = XUnit.FromMillimeter(100);
-            page.Height = XUnit.FromMillimeter(100);
-
-            using var gfx = XGraphics.FromPdfPage(page);
-            var format = new XStringFormat { Alignment = XStringAlignment.Center };
-
-            gfx.DrawRectangle(new XPen(XColor.FromArgb(243, 193, 120), 3), 10, 10, page.Width - 20, page.Height - 20);
-            gfx.DrawString(table.Name.ToUpperInvariant(), new XFont("Arial", 16, XFontStyleEx.Bold), XBrushes.Black, new XPoint(page.Width / 2, 30), format);
-            DrawQrCodeVector(gfx, BuildOrderUrl(table.TableNumber), (page.Width - 160) / 2, 45, 160);
-            gfx.DrawString("Quet QR de xem Menu va goi mon", new XFont("Arial", 9, XFontStyleEx.Italic), XBrushes.Gray, new XPoint(page.Width / 2, page.Height - 20), format);
-        }
-
-        private string BuildOrderUrl(string tableNumber)
-        {
-            return $"{Request.Scheme}://{Request.Host}/Home/Index?tableId={tableNumber}";
-        }
-
+        // ==========================================
+        // HÀM VẼ QR VECTOR TRỰC TIẾP LÊN PDF
+        // ==========================================
         private void DrawQrCodeVector(XGraphics gfx, string text, double x, double y, double size)
         {
-            using var qrGenerator = new QRCodeGenerator();
-            var qrCodeData = qrGenerator.CreateQrCode(text, QRCodeGenerator.ECCLevel.Q);
-            var matrix = qrCodeData.ModuleMatrix;
-            var moduleSize = size / matrix.Count;
-
-            for (var row = 0; row < matrix.Count; row++)
+            using (var qrGenerator = new QRCodeGenerator())
             {
-                for (var col = 0; col < matrix.Count; col++)
+                var qrCodeData = qrGenerator.CreateQrCode(text, QRCodeGenerator.ECCLevel.Q);
+                var matrix = qrCodeData.ModuleMatrix;
+                
+                int moduleCount = matrix.Count;
+                double moduleSize = size / moduleCount; 
+
+                XBrush blackBrush = XBrushes.Black;
+
+                for (int row = 0; row < moduleCount; row++)
                 {
-                    if (matrix[row][col])
-                        gfx.DrawRectangle(XBrushes.Black, x + col * moduleSize, y + row * moduleSize, moduleSize, moduleSize);
+                    for (int col = 0; col < moduleCount; col++)
+                    {
+                        if (matrix[row][col]) 
+                        {
+                            gfx.DrawRectangle(blackBrush, x + (col * moduleSize), y + (row * moduleSize), moduleSize, moduleSize);
+                        }
+                    }
                 }
             }
         }
 
+        // ==========================================
+        // CÁC HÀM TRỢ GIÚP TẠO MÃ QR (DÙNG CHO WEB)
+        // ==========================================
         private byte[] GenerateQrBytes(string text)
         {
-            using var qrGenerator = new QRCodeGenerator();
-            var qrCodeData = qrGenerator.CreateQrCode(text, QRCodeGenerator.ECCLevel.Q);
-            using var qrCode = new PngByteQRCode(qrCodeData);
-            return qrCode.GetGraphic(15);
+            using (var qrGenerator = new QRCodeGenerator())
+            {
+                var qrCodeData = qrGenerator.CreateQrCode(text, QRCodeGenerator.ECCLevel.Q);
+                using (var qrCode = new PngByteQRCode(qrCodeData))
+                {
+                    return qrCode.GetGraphic(15); 
+                }
+            }
         }
 
         private string GenerateQrBase64(string text)
         {
-            return "data:image/png;base64," + Convert.ToBase64String(GenerateQrBytes(text));
+            byte[] bytes = GenerateQrBytes(text);
+            return "data:image/png;base64," + Convert.ToBase64String(bytes);
         }
 
+        // ==========================================
+        // CẤU HÌNH FONT CHỮ
+        // ==========================================
         public class CustomFontResolver : IFontResolver
         {
             public string DefaultFontName => "Arial";
 
             public byte[] GetFont(string faceName)
             {
-                if (faceName == "ArialBold") return System.IO.File.ReadAllBytes(@"C:\Windows\Fonts\arialbd.ttf");
-                if (faceName == "ArialItalic") return System.IO.File.ReadAllBytes(@"C:\Windows\Fonts\ariali.ttf");
+                if (faceName == "ArialBold") 
+                    return System.IO.File.ReadAllBytes(@"C:\Windows\Fonts\arialbd.ttf");
+                
+                if (faceName == "ArialItalic") 
+                    return System.IO.File.ReadAllBytes(@"C:\Windows\Fonts\ariali.ttf");
+                
                 return System.IO.File.ReadAllBytes(@"C:\Windows\Fonts\arial.ttf");
             }
 
             public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic)
             {
-                if (isBold) return new FontResolverInfo("ArialBold");
-                if (isItalic) return new FontResolverInfo("ArialItalic");
-                return new FontResolverInfo("Arial");
+                string name = "Arial";
+                if (isBold) name = "ArialBold";
+                else if (isItalic) name = "ArialItalic";
+                
+                return new FontResolverInfo(name);
             }
         }
     }

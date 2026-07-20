@@ -72,7 +72,7 @@ namespace MenuQr.Controllers
 
             if (id == "all")
             {
-                var allDishes = await _dishCollection.Find(d => d.IsAvailable && !d.IsDeleted).ToListAsync();
+                var allDishes = await _dishCollection.Find(d => d.IsAvailable).ToListAsync();
                 
                 // Thuật toán đan xen món ăn (Round-Robin)
                 var groupedDishes = allDishes.GroupBy(d => d.CategoryId).ToList();
@@ -93,7 +93,7 @@ namespace MenuQr.Controllers
             }
             else
             {
-                dishes = await _dishCollection.Find(d => d.IsAvailable && !d.IsDeleted && d.CategoryId == id).ToListAsync();
+                dishes = await _dishCollection.Find(d => d.IsAvailable && d.CategoryId == id).ToListAsync();
                 currentName = categories.FirstOrDefault(c => c.Id == id)?.Name ?? "Danh mục";
             }
 

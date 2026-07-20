@@ -33,20 +33,11 @@ namespace MenuQr.Areas.Admin.Models
         [BsonElement("is_available")]
         public bool IsAvailable { get; set; } = true;
 
-        [BsonElement("is_deleted")]
-        public bool IsDeleted { get; set; } = false;
-
         [BsonElement("image_url")]
         public string? ImageUrl { get; set; }
 
         [BsonElement("specifications")]
         public List<Specification> Specifications { get; set; } = new();
-
-        [BsonElement("created_at")]
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-
-        [BsonElement("updated_at")]
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 
     public class Specification
