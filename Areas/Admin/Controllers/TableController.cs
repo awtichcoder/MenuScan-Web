@@ -1,4 +1,5 @@
 using MenuQr.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using PdfSharp.Drawing;
@@ -9,6 +10,7 @@ using QRCoder;
 namespace MenuQr.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = "Admin")]
     public class TableController : Controller
     {
         private readonly IMongoCollection<DiningTable> _tableCollection;
