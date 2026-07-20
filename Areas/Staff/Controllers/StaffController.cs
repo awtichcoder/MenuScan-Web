@@ -13,6 +13,14 @@ using MenuQr.Data;
 
 namespace MenuQr.Areas.Staff.Controllers
 {
+    public class StaffAddItemRequest
+{
+    public string OrderId { get; set; } = null!;
+    public string DishId { get; set; } = null!;
+    public string DishName { get; set; } = null!;
+    public decimal Price { get; set; }
+    public int Quantity { get; set; } = 1;
+}
     [Area("Staff")] 
     public class StaffController : Controller
     {
@@ -26,7 +34,121 @@ namespace MenuQr.Areas.Staff.Controllers
             _tableCollection = mongoDatabase.GetCollection<DiningTable>("DiningTables");
             _orderCollection = mongoDatabase.GetCollection<ActiveOrder>("ActiveOrders");
         }
-        [HttpPost]
+        [HttpGet]
+[HttpGet]
+public async Task<IActionResult> GetAllDishes()
+{
+    try
+    {
+        // 1. Lấy collection "Dishes" từ MongoDB
+        var dishesCollection = _tableCollection.Database.GetCollection<Dish>("Dishes");
+
+        // 2. Lấy danh sách món ăn từ DB (chỉ lấy những món đang khả dụng IsAvailable = true)
+        var dishes = await dishesCollection.Find(d => d.IsAvailable).ToListAsync();
+
+        // 3. Map sang dữ liệu mà Javascript đang chờ
+        // Dùng BasePrice để nhân viên thấy được giá gốc
+        var result = dishes.Select(d => new {
+            id = d.Id,
+            name = d.Name,
+            price = d.BasePrice 
+        });
+
+        return Json(result);
+    }
+    catch (Exception ex)
+    {
+        return Json(new { success = false, message = ex.Message });
+    }
+}
+        
+// Đừng quên class này (Nếu bạn chưa thêm ở ngoài cùng file)
+
+
+// Hàm thêm món an toàn dành riêng cho Nhân viên (Staff)
+[HttpPost]
+public async Task<IActionResult> AddItemToOrder([FromBody] StaffAddItemRequest request)
+{
+    try
+    {
+        if (string.IsNullOrEmpty(request.OrderId))
+            return Json(new { success = false, message = "Thiếu thông tin mã đơn hàng!" });
+
+        // Tìm đơn hàng theo ID
+        var filter = Builders<ActiveOrder>.Filter.Eq(o => o.Id, request.OrderId);
+        
+        // Tạo món ăn mới với ĐẦY ĐỦ thông tin cần thiết
+        var newItem = new ActiveOrderItem 
+        { 
+            DishId = request.DishId, 
+            DishName = request.DishName,         // Bắt buộc để in Bill không bị rỗng tên
+            Quantity = request.Quantity,
+            BasePrice = request.Price,           // Giá gốc
+            FinalPrice = request.Price,          // Giá cuối (Chưa tính topping)
+            ItemStatus = "Ordered",              // Xác nhận luôn vì nhân viên tự thêm
+            OrderedAt = DateTime.Now
+        };
+        
+        // Push món mới vào mảng Items và cập nhật thời gian
+        var update = Builders<ActiveOrder>.Update
+            .Push(o => o.Items, newItem)
+            .Set(o => o.UpdatedAt, DateTime.Now);
+            
+        var result = await _orderCollection.UpdateOneAsync(filter, update);
+        
+        if (result.ModifiedCount > 0)
+        {
+            return Json(new { success = true, message = "Thêm món thành công!" });
+        }
+        
+        return Json(new { success = false, message = "Không tìm thấy đơn hàng trên hệ thống." });
+    }
+    catch (Exception ex)
+    {
+        return Json(new { success = false, message = "Lỗi Server: " + ex.Message });
+    }
+}
+     [HttpPost]
+public async Task<IActionResult> CreateTakeaway()
+{
+    try
+    {
+        // 1. Tạo một mã số ngẫu nhiên cho đơn mang đi
+        string randomId = new Random().Next(1000, 9999).ToString();
+        string tableCode = "TKW-" + randomId; 
+        string tableName = "Mang Đi #" + randomId; 
+
+        // 2. Tạo một bàn ảo mới lưu vào MongoDB
+        var newTable = new DiningTable 
+        {
+            TableNumber = tableCode,
+            Name = tableName,
+            IsActive = true,
+            NeedsService = false
+        };
+        await _tableCollection.InsertOneAsync(newTable);
+
+        // 3. Tạo một Order mới bằng model ActiveOrder của bạn
+        var newOrder = new ActiveOrder 
+        {
+            TableNumber = tableCode,
+            Status = "SERVING", 
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now,
+            Items = new List<ActiveOrderItem>() // Khởi tạo danh sách món rỗng
+        };
+        
+        // BẮT BUỘC PHẢI CHẠY DÒNG NÀY: Lưu vào DB để MongoDB tự sinh ra Id
+        await _orderCollection.InsertOneAsync(newOrder); 
+
+        // 4. Trả về thông tin (Lúc này newOrder.Id đã có dữ liệu thực tế)
+        return Json(new { success = true, tableNumber = tableCode, orderId = newOrder.Id });
+    }
+    catch (Exception ex)
+    {
+        return Json(new { success = false, message = ex.Message });
+    }
+}
 [HttpPost]
 public async Task<IActionResult> ClearServiceAlert(string tableNumber)
 {
