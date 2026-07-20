@@ -16,6 +16,7 @@ namespace MenuQr.Controllers
     public class OrderController : Controller
     {
         private readonly IMongoCollection<ActiveOrder> _activeOrderCollection;
+        private readonly IMongoCollection<DiningTable> _tableCollection;
         private readonly ApplicationDbContext _sqlDbContext; // Class DbContext của SQL Server (EF Core)
         private readonly IHubContext<StaffHub> _staffHub;
         private readonly IConfiguration _configuration;
@@ -25,13 +26,33 @@ namespace MenuQr.Controllers
             IMongoDatabase mongoDatabase, 
             ApplicationDbContext sqlDbContext, 
             IHubContext<StaffHub> staffHub,
+
             IConfiguration configuration)
         {
             _activeOrderCollection = mongoDatabase.GetCollection<ActiveOrder>("ActiveOrders");
+            _tableCollection = mongoDatabase.GetCollection<DiningTable>("DiningTables");
             _sqlDbContext = sqlDbContext;
             _staffHub = staffHub; // Khởi tạo Hub
             _configuration = configuration;
         }
+        [HttpPost]
+public async Task<IActionResult> CallStaff(string tableId)
+{
+    try
+    {
+        if (string.IsNullOrEmpty(tableId)) return BadRequest();
+
+        // Tìm bàn và bật cờ "Cần phục vụ" lên true
+        var update = Builders<DiningTable>.Update.Set(t => t.NeedsService, true);
+        await _tableCollection.UpdateOneAsync(t => t.TableNumber == tableId, update);
+
+        return Ok(new { success = true });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, "Lỗi server: " + ex.Message);
+    }
+}
         // 1. API: Tạo URL thanh toán VNPay
     [HttpPost]
     public async Task<IActionResult> CreateVnPayPayment(string tableId)
@@ -354,16 +375,7 @@ public async Task<IActionResult> RemovePendingItem(string tableId, string cartIt
     await _activeOrderCollection.UpdateOneAsync(o => o.TableNumber == tableId && o.Status == "Serving", update);
     return Ok(new { success = true });
 }
-[HttpPost]
-        public async Task<IActionResult> CallStaff(string tableId)
-        {
-            string time = DateTime.Now.ToString("HH:mm");
-            
-            // "ReceiveStaffCall" là tên mã sự kiện. Màn hình nhân viên phải đăng ký tên này mới nghe được.
-            await _staffHub.Clients.All.SendAsync("ReceiveStaffCall", tableId, time);
-            
-            return Ok(new { success = true });
-        }
+
         
 [HttpPost]
 public async Task<IActionResult> CheckoutOrder(string tableId, string paymentMethod = "Cash")
