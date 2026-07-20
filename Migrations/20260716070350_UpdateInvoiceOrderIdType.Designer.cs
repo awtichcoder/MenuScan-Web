@@ -41,8 +41,7 @@ namespace MenuQr.Migrations
 
                     b.Property<string>("OrderId")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("PaidAt")
                         .ValueGeneratedOnAdd()
@@ -79,15 +78,19 @@ namespace MenuQr.Migrations
 
             modelBuilder.Entity("MenuQr.Models.Order", b =>
                 {
-                    b.Property<string>("OrderId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<int>("OrderId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderId"));
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");
+
+                    b.Property<int?>("InvoiceId")
+                        .HasColumnType("int");
 
                     b.Property<string>("OrderType")
                         .IsRequired()
@@ -107,6 +110,8 @@ namespace MenuQr.Migrations
 
                     b.HasKey("OrderId")
                         .HasName("PK__Orders__C3905BCF4A21C079");
+
+                    b.HasIndex("InvoiceId");
 
                     b.ToTable("Orders");
                 });
@@ -145,10 +150,8 @@ namespace MenuQr.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("OrderId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("PriceAfterDiscount")
                         .HasColumnType("decimal(18, 2)");
@@ -217,21 +220,21 @@ namespace MenuQr.Migrations
 
             modelBuilder.Entity("MenuQr.Models.Invoice", b =>
                 {
-                    b.HasOne("MenuQr.Models.Order", "Order")
-                        .WithOne("Invoice")
-                        .HasForeignKey("MenuQr.Models.Invoice", "OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK__Invoices__OrderI__44FF419A");
-
                     b.HasOne("MenuQr.Models.User", "Cashier")
                         .WithMany("Invoices")
                         .HasForeignKey("CashierId")
                         .HasConstraintName("FK__Invoices__Cashie__45F365D3");
 
-                    b.Navigation("Order");
-
                     b.Navigation("Cashier");
+                });
+
+            modelBuilder.Entity("MenuQr.Models.Order", b =>
+                {
+                    b.HasOne("MenuQr.Models.Invoice", "Invoice")
+                        .WithMany()
+                        .HasForeignKey("InvoiceId");
+
+                    b.Navigation("Invoice");
                 });
 
             modelBuilder.Entity("MenuQr.Models.OrderDetail", b =>

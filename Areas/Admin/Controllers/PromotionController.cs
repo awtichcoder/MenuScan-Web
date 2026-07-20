@@ -1,12 +1,10 @@
 using MenuQr.Areas.Admin.Models;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 
 namespace MenuQr.Areas.Admin.Controllers
 {
     [Area("Admin")]
-    [Authorize(Roles = "Admin")]
     public class PromotionController : Controller
     {
         private readonly IMongoCollection<Promotion> _promotionCollection;

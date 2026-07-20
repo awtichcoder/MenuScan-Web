@@ -2,7 +2,6 @@ using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using MenuQr.Areas.Admin.Models;
 using MenuQr.Models;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -10,7 +9,6 @@ using MongoDB.Driver;
 namespace MenuQr.Areas.Admin.Controllers
 {
     [Area("Admin")]
-    [Authorize(Roles = "Admin")]
     public class DishController : Controller
     {
         private readonly IMongoCollection<Dish> _dishCollection;

@@ -65,11 +65,8 @@
                         AD
                     </div>
                     <div>
-                        <p class="text-sm font-bold text-gray-800">@(User.Identity?.Name ?? "Admin")</p>
-                        <form asp-area="" asp-controller="Account" asp-action="Logout" method="post">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="text-xs text-red-500 hover:underline">Dang xuat</button>
-                        </form>
+                        <p class="text-sm font-bold text-gray-800">Admin Quán</p>
+                        <a href="/" class="text-xs text-red-500 hover:underline">Đăng xuất</a>
                     </div>
                 </div>
             </div>

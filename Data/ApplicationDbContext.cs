@@ -41,7 +41,6 @@ public partial class ApplicationDbContext : DbContext
 
             entity.HasIndex(e => e.OrderId, "UQ__Invoices__C3905BCE056715A2").IsUnique();
 
-            entity.Property(e => e.OrderId).HasMaxLength(50);
             entity.Property(e => e.FinalAmount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.PaidAt)
                 .HasDefaultValueSql("(getdate())")
@@ -57,17 +56,16 @@ public partial class ApplicationDbContext : DbContext
                 .HasForeignKey(d => d.CashierId)
                 .HasConstraintName("FK__Invoices__Cashie__45F365D3");
 
-            entity.HasOne(d => d.Order).WithOne(p => p.Invoice)
-                .HasForeignKey<Invoice>(d => d.OrderId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK__Invoices__OrderI__44FF419A");
+            // entity.HasOne(d => d.Order).WithOne(p => p.Invoice)
+            //     .HasForeignKey<Invoice>(d => d.OrderId)
+            //     .OnDelete(DeleteBehavior.ClientSetNull)
+            //     .HasConstraintName("FK__Invoices__OrderI__44FF419A");
         });
 
         modelBuilder.Entity<Order>(entity =>
         {
             entity.HasKey(e => e.OrderId).HasName("PK__Orders__C3905BCF4A21C079");
 
-            entity.Property(e => e.OrderId).HasMaxLength(50);
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
@@ -91,7 +89,6 @@ public partial class ApplicationDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.DishName).HasMaxLength(255);
             entity.Property(e => e.ItemNote).HasMaxLength(500);
-            entity.Property(e => e.OrderId).HasMaxLength(50);
             entity.Property(e => e.PriceAfterDiscount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.TotalToppingPrice).HasColumnType("decimal(18, 2)");
 

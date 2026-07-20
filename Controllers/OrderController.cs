@@ -233,7 +233,6 @@ namespace MenuQr.Controllers
                         // 2.1 Tạo Đơn hàng chính (Orders)
                         var sqlOrder = new Order // Class SQL của bạn
                         {
-                            OrderId = activeOrder.Id,
                             TableNumber = activeOrder.TableNumber,
                             OrderType = "Dine-in",
                             Status = "Completed",
