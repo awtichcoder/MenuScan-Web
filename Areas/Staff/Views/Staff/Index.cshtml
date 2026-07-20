@@ -7,9 +7,110 @@
 <div id="audio-unlock-overlay"
      class="fixed inset-0 z-[10000] bg-black/60 flex items-center justify-center backdrop-blur-sm transition-opacity duration-300">
     <div class="bg-white p-8 rounded-2xl text-center max-w-sm mx-auto shadow-2xl">
-        <div
-            class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+        <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
             <i class="fa-solid fa-bell text-3xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Bắt đầu ca làm việc</h3>
+        <p class="text-gray-500 text-sm mb-6">Vui lòng xác nhận để hệ thống có thể phát âm thanh thông báo khi khách gọi phục vụ hoặc thanh toán.</p>
+        <button onclick="unlockAudio()"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-md flex items-center justify-center gap-2">
+            <i class="fa-solid fa-power-off"></i> Xác nhận & Bắt đầu
+        </button>
+    </div>
+</div>
+
+<div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+
+<div
+    class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
+    <div>
+        <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <i class="fa-solid fa-gauge-high text-blue-600"></i> BẢNG ĐIỀU KHIỂN
+        </h1>
+        <p class="text-sm text-gray-500 mt-1">Quản lý tình trạng bàn và theo dõi order.</p>
+    </div>
+    <div class="mt-3 sm:mt-0">
+        <span
+            class="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 flex items-center gap-2">
+            <i class="fa-solid fa-user-tag text-gray-500"></i> Ca làm việc: <strong>@ViewBag.StaffName</strong>
+        </span>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div class="lg:col-span-7">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div
+                class="bg-gray-900 text-white px-5 py-4 flex flex-wrap gap-4 justify-between items-center border-b border-gray-800">
+                <h2 class="font-bold text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-table-cells"></i> Sơ đồ bàn ăn
+                </h2>
+
+                <div class="relative w-full sm:w-48">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-gray-400 text-xs"></i>
+                    </span>
+                    <input type="text" id="table-search-input" onkeyup="filterTables()" placeholder="Tìm tên bàn..."
+                           class="w-full pl-8 pr-3 py-1.5 bg-gray-800 text-white placeholder-gray-400 text-xs rounded-xl border border-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
+                </div>
+
+                <div class="flex gap-2 text-xs font-bold uppercase tracking-wide">
+                    <span class="bg-green-500 text-white px-2.5 py-1 rounded-md">Trống</span>
+                    <span class="bg-red-500 text-white px-2.5 py-1 rounded-md">Khách</span>
+                    <span class="bg-yellow-500 text-white px-2.5 py-1 rounded-md animate-pulse">Gọi</span>
+                </div>
+            </div>
+
+            <div class="p-5 bg-gray-50 flex flex-col h-full">
+                <div id="table-grid-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 flex-1">
+                    @foreach (var table in Model.Tables)
+                    {
+                        var activeOrder = Model.ActiveOrders.FirstOrDefault(o => o.TableNumber == table.TableNumber);
+                        bool hasCustomer = activeOrder != null;
+
+                        string borderClass = table.NeedsService ? "border-yellow-400 shadow-md ring-2 ring-yellow-200"
+                                                                : (hasCustomer ? "border-red-300" : "border-green-300");
+
+                        <div onclick="viewOrderDetails('@table.TableNumber', '@(hasCustomer ? activeOrder.Id.ToString() : "")')"
+                            @(needsService ? "border-yellow-400 bg-yellow-50" : hasCustomer ? "border-red-300" : "border-green-300")">
+
+                            <h3 class="font-bold text-gray-800 text-lg mb-1">@table.Name</h3>
+                            <p class="text-xs text-gray-500 font-mono mb-4 bg-gray-100 px-2 py-0.5 rounded">Mã:
+                                @table.TableNumber</p>
+
+                                <div class="mt-auto w-full">
+                                    @if (needsService)
+                                    {
+                                        <span
+                                            class="inline-block bg-yellow-100 text-yellow-800 border border-yellow-300 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm mb-2">
+                                            <i class="fa-solid fa-bell mr-1"></i> Cần hỗ trợ
+                                        </span>
+                                        <button type="button" onclick="event.stopPropagation(); clearServiceRequest('@table.TableNumber')"
+                                                class="w-full bg-yellow-500 hover:bg-yellow-600 text-white text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg transition">
+                                            Đã hỗ trợ
+                                        </button>
+                                    }
+                                    else if (hasCustomer)
+                                    {
+                                        <span
+                                            class="inline-block bg-red-100 text-red-700 border border-red-200 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm">
+                                            <i class="fa-solid fa-bell mr-1"></i> Có khách
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span
+                                            class="inline-block bg-green-100 text-green-700 border border-green-200 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm">
+                                            <i class="fa-solid fa-check mr-1"></i> Trống
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+>>>>>>> origin/ADMIN_V3
         </div>
         <h3 class="text-xl font-bold text-gray-800 mb-2">Bắt đầu ca làm việc</h3>
         <p class="text-gray-500 text-sm mb-6">Vui lòng xác nhận để hệ thống có thể phát âm thanh thông báo khi khách gọi
@@ -261,6 +362,25 @@
 
                 await fetch(`/Staff/Staff/ClearServiceAlert?tableNumber=${tableNumber}`, { method: 'POST' });
                 forceRefreshGrid();
+            }
+
+            async function clearServiceRequest(tableNumber) {
+                let formData = new FormData();
+                formData.append("tableNumber", tableNumber);
+
+                try {
+                    let res = await fetch('/Staff/Staff/ClearServiceRequest', { method: 'POST', body: formData });
+                    if (res.ok) {
+                        let toast = document.getElementById('toast-' + tableNumber);
+                        if (toast) toast.remove();
+                        notifiedTables = notifiedTables.filter(t => t !== tableNumber);
+                        forceRefreshGrid();
+                    } else {
+                        alert("Không thể cập nhật trạng thái hỗ trợ.");
+                    }
+                } catch (e) {
+                    alert("Lỗi kết nối khi cập nhật trạng thái hỗ trợ.");
+                }
             }
 
             async function forceRefreshGrid() {

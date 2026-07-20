@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 
 <head>
@@ -34,12 +34,15 @@
                 <div class="flex items-center gap-4">
                     <div class="flex items-center gap-2 text-sm font-medium">
                         <i class="fa-solid fa-circle-user text-xl text-[#F3C178]"></i>
-                        <span class="hidden sm:block">@ViewBag.StaffName</span>
+                        <span class="hidden sm:block">@(User.Identity?.Name ?? ViewBag.StaffName)</span>
                     </div>
                     <div class="w-px h-6 bg-gray-600 mx-1"></div>
-                    <a href="#" class="text-gray-300 hover:text-white flex items-center gap-2 text-sm transition">
-                        <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:block">Đăng xuất</span>
-                    </a>
+                    <form asp-area="" asp-controller="Account" asp-action="Logout" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="text-gray-300 hover:text-white flex items-center gap-2 text-sm transition">
+                            <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:block">Đăng xuất</span>
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>

@@ -1,0 +1,52 @@
+@model List<MenuQr.Areas.Admin.Models.Category>
+@{
+    ViewData["Title"] = "Quan ly danh muc";
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+}
+
+<div class="max-w-6xl mx-auto bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+    <div class="flex items-center justify-between gap-4 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Danh muc mon an</h1>
+            <p class="text-sm text-gray-500">Quan ly nhom mon, thu tu hien thi va trang thai.</p>
+        </div>
+        <a href="/Admin/Category/Create" class="px-4 py-2 rounded-xl bg-black text-white font-semibold">Them danh muc</a>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-gray-500 border-b">
+                    <th class="py-3">Ten</th>
+                    <th class="py-3">Mo ta</th>
+                    <th class="py-3">Thu tu</th>
+                    <th class="py-3 text-right">Thao tac</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr class="border-b last:border-0" data-id="@item.Id">
+                        <td class="py-3 font-semibold text-gray-900">@item.Name</td>
+                        <td class="py-3 text-gray-600">@(string.IsNullOrWhiteSpace(item.Description) ? "-" : item.Description)</td>
+                        <td class="py-3 text-gray-700">@item.DisplayOrder</td>
+                        <td class="py-3 text-right whitespace-nowrap">
+                            <a href="/Admin/Category/Edit/@item.Id" class="px-3 py-2 rounded-lg bg-amber-100 text-amber-800 font-semibold">Sua</a>
+                            <button class="px-3 py-2 rounded-lg bg-red-100 text-red-700 font-semibold" onclick="deleteCategory('@item.Id')">Xoa</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    async function deleteCategory(id) {
+        if (!confirm('Xoa danh muc nay? Danh muc dang chua mon se bi chan.')) return;
+        const res = await fetch(`/api/admin/categories/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        alert(data.message || (data.success ? 'Da xoa.' : 'Co loi xay ra.'));
+        if (data.success) location.reload();
+    }
+</script>

@@ -56,8 +56,6 @@ CREATE TABLE Invoices (
     PaymentStatus NVARCHAR(50) DEFAULT N'Paid', 
     PaidAt DATETIME DEFAULT GETDATE(), 
     
-    FOREIGN KEY (CashierId) REFERENCES Users(UserId)
-
-    
-    -- FOREIGN KEY (OrderId) REFERENCES Orders(OrderId)
+    FOREIGN KEY (CashierId) REFERENCES Users(UserId),
+    FOREIGN KEY (OrderId) REFERENCES Orders(OrderId) ON DELETE CASCADE
 );
