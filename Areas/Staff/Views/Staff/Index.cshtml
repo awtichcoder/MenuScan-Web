@@ -4,320 +4,487 @@
     Layout = "~/Areas/Staff/Views/Shared/_StaffLayout.cshtml";
 }
 
-<div
-    class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
-    <div>
-        <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <i class="fa-solid fa-gauge-high text-blue-600"></i> BẢNG ĐIỀU KHIỂN
-        </h1>
-        <p class="text-sm text-gray-500 mt-1">Quản lý tình trạng bàn và theo dõi order.</p>
-    </div>
-    <div class="mt-3 sm:mt-0">
-        <span
-            class="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 flex items-center gap-2">
-            <i class="fa-solid fa-user-tag text-gray-500"></i> Ca làm việc: <strong>@ViewBag.StaffName</strong>
-        </span>
-    </div>
-</div>
-
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-    <div class="lg:col-span-7">
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div
-                class="bg-gray-900 text-white px-5 py-4 flex flex-wrap gap-2 justify-between items-center border-b border-gray-800">
-                <h2 class="font-bold text-lg flex items-center gap-2">
-                    <i class="fa-solid fa-table-cells"></i> Sơ đồ bàn ăn
-                </h2>
-                <div class="flex gap-2 text-xs font-bold uppercase tracking-wide">
-                    <span class="bg-green-500 text-white px-2.5 py-1 rounded-md">Trống</span>
-                    <span class="bg-red-500 text-white px-2.5 py-1 rounded-md">Có khách</span>
-                </div>
-            </div>
-
-            <div class="p-5 bg-gray-50">
-                <div id="table-grid-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    @foreach (var table in Model.Tables)
-                    {
-                        var activeOrder = Model.ActiveOrders.FirstOrDefault(o => o.TableNumber == table.TableNumber);
-                        bool hasCustomer = activeOrder != null;
-
-                        <div onclick="viewOrderDetails('@table.TableNumber', '@(hasCustomer ? activeOrder.Id.ToString() : "")')"
-                             class="relative cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-md rounded-2xl p-4 border-2 flex flex-col items-center text-center bg-white
-                            @(hasCustomer ? "border-red-300" : "border-green-300")">
-
-                            <h3 class="font-bold text-gray-800 text-lg mb-1">@table.Name</h3>
-                            <p class="text-xs text-gray-500 font-mono mb-4 bg-gray-100 px-2 py-0.5 rounded">Mã:
-                                @table.TableNumber</p>
-
-                                <div class="mt-auto w-full">
-                                    @if (hasCustomer)
-                                    {
-                                        <span
-                                            class="inline-block bg-red-100 text-red-700 border border-red-200 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm">
-                                            <i class="fa-solid fa-bell mr-1"></i> Có khách
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span
-                                            class="inline-block bg-green-100 text-green-700 border border-green-200 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm">
-                                            <i class="fa-solid fa-check mr-1"></i> Trống
-                                        </span>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
+<div id="audio-unlock-overlay"
+     class="fixed inset-0 z-[10000] bg-black/60 flex items-center justify-center backdrop-blur-sm transition-opacity duration-300">
+    <div class="bg-white p-8 rounded-2xl text-center max-w-sm mx-auto shadow-2xl">
+        <div
+            class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+            <i class="fa-solid fa-bell text-3xl"></i>
         </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Bắt đầu ca làm việc</h3>
+        <p class="text-gray-500 text-sm mb-6">Vui lòng xác nhận để hệ thống có thể phát âm thanh thông báo khi khách gọi
+            phục vụ hoặc thanh toán.</p>
+            <button onclick="unlockAudio()"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-md flex items-center justify-center gap-2">
+                <i class="fa-solid fa-power-off"></i> Xác nhận & Bắt đầu
+            </button>
+        </div>
+    </div>
 
-        <div class="lg:col-span-5">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-20">
-                <div class="bg-blue-600 text-white px-5 py-4">
+    <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+
+    <div
+        class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
+        <div>
+            <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-gauge-high text-blue-600"></i> BẢNG ĐIỀU KHIỂN
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">Quản lý tình trạng bàn và theo dõi order.</p>
+        </div>
+        <div class="mt-3 sm:mt-0">
+            <span
+                class="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 flex items-center gap-2">
+                <i class="fa-solid fa-user-tag text-gray-500"></i> Ca làm việc: <strong>@ViewBag.StaffName</strong>
+            </span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-7">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div
+                    class="bg-gray-900 text-white px-5 py-4 flex flex-wrap gap-4 justify-between items-center border-b border-gray-800">
                     <h2 class="font-bold text-lg flex items-center gap-2">
-                        <i class="fa-solid fa-receipt"></i> Chi tiết Order
+                        <i class="fa-solid fa-table-cells"></i> Sơ đồ bàn ăn
                     </h2>
-                </div>
 
-                <div id="detail-panel" class="p-8 min-h-[400px] flex items-center justify-center bg-gray-50">
-                    <div class="text-center text-gray-400">
-                        <i class="fa-solid fa-hand-pointer text-5xl mb-4 block opacity-40"></i>
-                        <p class="text-sm font-medium">Nhấp chọn một bàn bên trái<br>để xem chi tiết món ăn & thanh toán.
-                        </p>
+                    <div class="relative w-full sm:w-48">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <i class="fa-solid fa-magnifying-glass text-gray-400 text-xs"></i>
+                        </span>
+                        <input type="text" id="table-search-input" onkeyup="filterTables()" placeholder="Tìm tên bàn..."
+                               class="w-full pl-8 pr-3 py-1.5 bg-gray-800 text-white placeholder-gray-400 text-xs rounded-xl border border-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
+                    </div>
+
+                    <div class="flex gap-2 text-xs font-bold uppercase tracking-wide">
+                        <span class="bg-green-500 text-white px-2.5 py-1 rounded-md">Trống</span>
+                        <span class="bg-red-500 text-white px-2.5 py-1 rounded-md">Khách</span>
+                        <span class="bg-yellow-500 text-white px-2.5 py-1 rounded-md animate-pulse">Gọi</span>
                     </div>
                 </div>
-            </div>
-        </div>
 
-    </div>
+                <div class="p-5 bg-gray-50 flex flex-col h-full">
+                    <div id="table-grid-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 flex-1">
+                        @foreach (var table in Model.Tables)
+                        {
+                            var activeOrder = Model.ActiveOrders.FirstOrDefault(o => o.TableNumber == table.TableNumber);
+                            bool hasCustomer = activeOrder != null;
 
-    <script>
-        // Mảng lưu vết các hóa đơn đã in tự động để tránh bị tải xuống trùng lặp
-        let processedOrders = [];
+                            string borderClass = table.NeedsService ? "border-yellow-400 shadow-md ring-2 ring-yellow-200"
+                                                                    : (hasCustomer ? "border-red-300" : "border-green-300");
 
-        // ==========================================
-        // 1. HÀM LOAD CHI TIẾT MÓN ĂN & TÍNH TỔNG TIỀN
-        // ==========================================
-        async function viewOrderDetails(tableNumber, orderId) {
-            let panel = document.getElementById('detail-panel');
+                            <div onclick="viewOrderDetails('@table.TableNumber', '@(hasCustomer ? activeOrder.Id.ToString() : "")')"
+                                 data-table-number="@table.TableNumber" data-table-name="@table.Name"
+                                 data-needs-service="@table.NeedsService.ToString().ToLower()"
+                                 class="table-item relative cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-md rounded-2xl p-4 border-2 flex flex-col items-center text-center bg-white @borderClass">
 
-            if (!orderId) {
-                panel.innerHTML = `
-                    <div class="text-center w-full">
-                        <div class="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-green-200">
-                            <i class="fa-solid fa-check text-4xl"></i>
-                        </div>
-                        <h4 class="text-gray-800 font-bold text-xl mb-1">Bàn ${tableNumber} đang trống</h4>
-                        <p class="text-gray-500 text-sm mb-6">Chưa có khách ngồi hoặc chưa lên order.</p>
-                    </div>
-                `;
-                return;
-            }
+                                <h3 class="table-name-text font-bold text-gray-800 text-lg mb-1">@table.Name</h3>
+                                <p class="text-xs text-gray-500 font-mono mb-4 bg-gray-100 px-2 py-0.5 rounded">Mã:
+                                    @table.TableNumber</p>
 
-            panel.innerHTML = `
-                <div class="text-center w-full">
-                    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-4"></i>
-                    <p class="text-gray-500 font-medium text-sm">Đang tải hóa đơn bàn ${tableNumber}...</p>
-                </div>
-            `;
-
-            try {
-                let response = await fetch(`/Staff/Staff/GetOrderDetails?orderId=${orderId}`);
-                let order = await response.json();
-
-                let itemsList = order.items || order.Items || order.orderDetails || order.OrderDetails || [];
-                let itemsHtml = '';
-                let calculatedTotal = 0;
-
-                if (itemsList.length > 0) {
-                    itemsHtml = itemsList.map((i, index) => {
-                        let name = i.DishName || i.dishName || i.Name || i.name || 'Món ăn';
-                        let price = i.FinalPrice || i.finalPrice || i.BasePrice || i.basePrice || i.Price || i.price || 0;
-                        let qty = i.Quantity || i.quantity || 1;
-                        calculatedTotal += (price * qty);
-
-                        // 1. XỬ LÝ HIỂN THỊ OPTIONS ĐẸP MẮT (Bắt lỗi JSON thô)
-                        let optionsHtml = '';
-                        let opts = i.SelectedOptions || i.selectedOptions;
-                        if (opts && Array.isArray(opts) && opts.length > 0) {
-                            let optTexts = opts.map(o => {
-                                // Nếu nó lỡ bị biến thành chuỗi JSON, ép nó về object lại
-                                if (typeof o === 'string' && o.startsWith('{')) {
-                                    try { o = JSON.parse(o); } catch (e) { }
-                                }
-
-                                if (typeof o === 'object') {
-                                    // Lấy tên tuỳ chọn (bắt cả chữ hoa lẫn thường)
-                                    let optName = o.name || o.Name || o.OptionName || o.value || o.Value || '';
-                                    // Lấy giá phụ thu (nếu có)
-                                    let optPrice = o.extraPrice || o.ExtraPrice || 0;
-
-                                    // Nếu có cộng thêm tiền thì hiển thị ra luôn (VD: +10.000đ)
-                                    if (optPrice > 0) {
-                                        return `${optName} (+${optPrice.toLocaleString('vi-VN')}đ)`;
-                                    }
-                                    return optName;
-                                }
-                                return o;
-                            });
-
-                            // Lọc bỏ chuỗi rỗng và nối các tuỳ chọn lại bằng dấu chấm tròn
-                            let cleanOpts = optTexts.filter(t => t !== '').join(' • ');
-                            if (cleanOpts) {
-                                optionsHtml = `<p class="text-[11.5px] text-gray-500 font-medium mt-0.5"><i class="fa-solid fa-tags text-[10px] mr-1"></i> ${cleanOpts}</p>`;
-                            }
-                        }
-
-                        // 2. XỬ LÝ HIỂN THỊ GHI CHÚ CÓ NÚT ẨN/HIỆN
-                        let noteHtml = '';
-                        let note = i.Note || i.note || i.ItemNote || i.itemNote;
-                        if (note && note.trim() !== '') {
-                            let noteId = `note-${index}-${Date.now()}`; // Tạo ID ngẫu nhiên không trùng lặp
-                            noteHtml = `
-                                <div class="mt-1.5">
-                                    <button onclick="document.getElementById('${noteId}').classList.toggle('hidden')" class="text-[11px] text-orange-600 font-bold bg-orange-50 hover:bg-orange-100 border border-orange-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5">
-                                        <i class="fa-regular fa-comment-dots"></i> Xem ghi chú của khách
-                                    </button>
-                                    <div id="${noteId}" class="hidden mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800 italic shadow-sm">
-                                        <span class="font-bold">Ghi chú:</span> ${note}
+                                    <div class="mt-auto w-full">
+                                        @if (table.NeedsService)
+                                        {
+                                            <span
+                                                class="inline-block bg-yellow-100 text-yellow-700 border border-yellow-400 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm animate-pulse">
+                                                <i class="fa-solid fa-bell text-red-500 mr-1"></i> Đang gọi
+                                            </span>
+                                        }
+                                        else if (hasCustomer)
+                                        {
+                                            <span
+                                                class="inline-block bg-red-100 text-red-700 border border-red-200 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm">
+                                                <i class="fa-solid fa-user mr-1"></i> Có khách
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span
+                                                class="inline-block bg-green-100 text-green-700 border border-green-200 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm">
+                                                <i class="fa-solid fa-check mr-1"></i> Trống
+                                            </span>
+                                        }
                                     </div>
                                 </div>
-                            `;
-                        }
-
-                        return `
-                            <div class="flex justify-between items-start py-3 border-b border-gray-100 text-left">
-                                <div class="flex-1 pr-3">
-                                    <p class="font-bold text-gray-800 text-base">${name}</p>
-                                    <p class="text-xs text-gray-500 mb-0.5">SL: ${qty} x ${price.toLocaleString('vi-VN')}đ</p>
-                                    ${optionsHtml}
-                                    ${noteHtml}
-                                </div>
-                                <p class="font-bold text-blue-600 whitespace-nowrap pt-1 text-base">${(price * qty).toLocaleString('vi-VN')}đ</p>
-                            </div>`;
-                    }).join('');
-                } else {
-                    itemsHtml = '<div class="text-center text-gray-400 py-8"><i class="fa-solid fa-box-open text-3xl mb-2 block opacity-30"></i> Chưa có món nào.</div>';
-                }
-
-                panel.innerHTML = `
-                    <div class="w-full h-full flex flex-col text-left">
-                        <div class="flex justify-between items-center mb-4 border-b pb-2">
-                            <h3 class="font-bold text-xl text-gray-800">Bàn ${tableNumber}</h3>
-                            <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold uppercase">${order.status || order.Status}</span>
-                        </div>
-    
-                        <div class="flex-1 overflow-y-auto pr-2 mb-4 max-h-[300px]">
-                            ${itemsHtml}
+                            }
                         </div>
 
-                        <div class="bg-gray-100 p-4 rounded-xl mt-auto">
-                            <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-3">
-                                <span class="text-gray-600 font-medium">Tổng thanh toán:</span>
-                                <span class="text-2xl font-black text-red-600">${calculatedTotal.toLocaleString('vi-VN')} đ</span>
-                            </div>
-        
-                            <button onclick="payOrder('${order.id || order.Id}', '${tableNumber}')" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition shadow-md flex items-center justify-center gap-2 mb-2">
-                                <i class="fa-solid fa-print text-lg"></i> <span class="tracking-wide">XÁC NHẬN THANH TOÁN & IN BILL</span>
-                            </button>
-                
-                            <button onclick="printInvoice('${order.id || order.Id}')" class="w-full bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 font-bold py-2 rounded-xl transition text-xs flex items-center justify-center gap-1 mt-1">
-                                <i class="fa-solid fa-redo"></i> In lại hóa đơn
-                            </button>
+                        <div id="no-tables-message" class="hidden text-center py-8 text-gray-400 text-sm font-medium">
+                            <i class="fa-solid fa-folder-open text-3xl mb-2 block opacity-30"></i> Không tìm thấy bàn phù hợp.
+                        </div>
+
+                        <div id="pagination-controls" class="mt-6 flex justify-center items-center gap-2">
                         </div>
                     </div>
-                `;
-            } catch (error) {
-                console.error(error);
-                panel.innerHTML = `<p class="text-red-500 text-center">Lỗi tải dữ liệu. Vui lòng thử lại!</p>`;
-            }
-        }
+                </div>
+            </div>
 
-        // ==========================================
-        // 2. NHÂN VIÊN BẤM THANH TOÁN (TẠI QUẦY)
-        // ==========================================
-        async function payOrder(orderId, tableNumber) {
-            if (!confirm(`Xác nhận thanh toán cho Bàn ${tableNumber}?\nHệ thống sẽ dọn bàn và tự động tải file hóa đơn.`)) return;
+            <div class="lg:col-span-5">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-20">
+                    <div class="bg-blue-600 text-white px-5 py-4">
+                        <h2 class="font-bold text-lg flex items-center gap-2">
+                            <i class="fa-solid fa-receipt"></i> Chi tiết Order
+                        </h2>
+                    </div>
 
-            let formData = new FormData();
-            formData.append("orderId", orderId);
-            formData.append("paymentMethod", "Tại quầy");
+                    <div id="detail-panel" class="p-8 min-h-[400px] flex items-center justify-center bg-gray-50">
+                        <div class="text-center text-gray-400">
+                            <i class="fa-solid fa-hand-pointer text-5xl mb-4 block opacity-40"></i>
+                            <p class="text-sm font-medium">Nhấp chọn một bàn bên trái<br>để xem chi tiết món ăn & thanh toán.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            try {
-                let res = await fetch('/Staff/Staff/Checkout', { method: 'POST', body: formData });
-                let data = await res.json();
+        <script>
+            let processedOrders = [];
+            let notifiedTables = [];
 
-                if (data.success) {
-                    // Tự động kích hoạt tải file hóa đơn PDF về máy thu ngân
-                    window.open(`/Staff/Staff/ExportInvoicePdf?orderId=${orderId}&paymentMethod=${encodeURIComponent("Thanh toán tại quầy")}`, '_blank');
-                    processedOrders.push(orderId); // Lưu vết đã in
+            // BIẾN CHO PHÂN TRANG
+            let currentPage = 1;
+            const itemsPerPage = 12; // Số bàn hiển thị trên 1 trang
 
-                    // Đợi 1.2 giây rồi Reload dọn sạch bàn
-                    setTimeout(() => { window.location.reload(); }, 1200);
-                } else {
-                    alert(data.message);
+            const alertSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+
+            // Hàm render dữ liệu ra màn hình (Kết hợp cả Phân Trang & Tìm Kiếm)
+            function renderPagination() {
+                let tableItems = Array.from(document.querySelectorAll('.table-item'));
+                let input = document.getElementById('table-search-input');
+                let filterText = input.value.toLowerCase().trim();
+
+                // 1. Lọc các bàn theo chữ tìm kiếm
+                let filteredItems = tableItems.filter(item => {
+                    let tableName = item.getAttribute('data-table-name').toLowerCase();
+                    return tableName.includes(filterText);
+                });
+
+                // 2. Ẩn tất cả đi
+                tableItems.forEach(item => item.style.display = "none");
+
+                // 3. Tính toán số trang
+                let totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+                if (totalPages === 0) totalPages = 1;
+
+                // Tránh lỗi khi đang ở trang 3 mà gõ tìm kiếm chỉ ra 1 kết quả
+                if (currentPage > totalPages) currentPage = totalPages;
+
+                // 4. Hiển thị các bàn thuộc trang hiện tại
+                let start = (currentPage - 1) * itemsPerPage;
+                let end = start + itemsPerPage;
+                let visibleCount = 0;
+
+                for (let i = start; i < end && i < filteredItems.length; i++) {
+                    filteredItems[i].style.display = "";
+                    visibleCount++;
                 }
-            } catch (e) {
-                alert("Lỗi hệ thống khi thanh toán!");
+
+                // 5. Bật tắt dòng thông báo "Không tìm thấy"
+                let noMatchMsg = document.getElementById('no-tables-message');
+                if (visibleCount === 0) {
+                    noMatchMsg.classList.remove('hidden');
+                } else {
+                    noMatchMsg.classList.add('hidden');
+                }
+
+                // 6. Vẽ các nút chuyển trang
+                let paginationContainer = document.getElementById('pagination-controls');
+                let paginationHtml = '';
+
+                if (totalPages > 1) {
+                    // Nút Previous
+                    paginationHtml += `<button onclick="changePage(${currentPage - 1})" class="w-8 h-8 rounded-lg flex items-center justify-center bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition" ${currentPage === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left text-xs"></i></button>`;
+
+                    // Các số trang
+                    for (let i = 1; i <= totalPages; i++) {
+                        if (i === currentPage) {
+                            paginationHtml += `<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-600 text-white font-bold text-sm shadow-md transition">${i}</button>`;
+                        } else {
+                            paginationHtml += `<button onclick="changePage(${i})" class="w-8 h-8 rounded-lg flex items-center justify-center bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-blue-600 font-medium text-sm transition">${i}</button>`;
+                        }
+                    }
+
+                    // Nút Next
+                    paginationHtml += `<button onclick="changePage(${currentPage + 1})" class="w-8 h-8 rounded-lg flex items-center justify-center bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition" ${currentPage === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
+                }
+
+                paginationContainer.innerHTML = paginationHtml;
             }
-        }
 
-        // Nút in lại thủ công
-        function printInvoice(orderId) {
-            window.open(`/Staff/Staff/ExportInvoicePdf?orderId=${orderId}&paymentMethod=In lại`, '_blank');
-        }
+            // Hàm chuyển đổi trang
+            function changePage(page) {
+                currentPage = page;
+                renderPagination();
+            }
 
-        // ==========================================
-        // 3. AUTO REALTIME & TỰ ĐỘNG IN KHI KHÁCH THANH TOÁN ONLINE
-        // ==========================================
-        let isFirstLoad = true; // Biến cờ kiểm tra lần đầu load trang
+            // Hàm gọi khi gõ ô tìm kiếm
+            function filterTables() {
+                currentPage = 1; // Khi gõ tìm kiếm thì luôn reset về trang 1
+                renderPagination();
+            }
 
-        setInterval(async () => {
-            try {
-                // A. Cập nhật màu sắc sơ đồ bàn ngầm
+            // KHỞI TẠO PHÂN TRANG KHI VỪA VÀO WEB LẦN ĐẦU
+            document.addEventListener("DOMContentLoaded", () => {
+                renderPagination();
+            });
+
+            // -------------------------------------------------------------
+            // CÁC HÀM XỬ LÝ LOGIC BACKEND VÀ UI KHÁC BÊN DƯỚI GIỮ NGUYÊN
+            // -------------------------------------------------------------
+
+            function escapeHtml(text) {
+                return (text || "").toString()
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            function unlockAudio() {
+                alertSound.play().then(() => {
+                    alertSound.pause();
+                    alertSound.currentTime = 0;
+                }).catch(e => console.log("Không thể mở khóa audio:", e));
+
+                let overlay = document.getElementById('audio-unlock-overlay');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.remove(), 300);
+            }
+
+            async function acceptCall(tableNumber) {
+                let toast = document.getElementById('toast-' + tableNumber);
+                if (toast) toast.remove();
+
+                notifiedTables = notifiedTables.filter(t => t !== tableNumber);
+
+                await fetch(`/Staff/Staff/ClearServiceAlert?tableNumber=${tableNumber}`, { method: 'POST' });
+                forceRefreshGrid();
+            }
+
+            async function forceRefreshGrid() {
                 let res = await fetch(window.location.href);
                 let text = await res.text();
                 let doc = new DOMParser().parseFromString(text, 'text/html');
                 let newGrid = doc.getElementById('table-grid-container');
                 let oldGrid = document.getElementById('table-grid-container');
-
                 if (newGrid && oldGrid) {
                     oldGrid.innerHTML = newGrid.innerHTML;
+                    // Quan trọng: Phải gọi lại renderPagination sau khi cập nhật HTML để giữ lại trang hiện tại
+                    renderPagination();
+                }
+            }
+
+            async function viewOrderDetails(tableNumber, orderId) {
+                acceptCall(tableNumber);
+
+                let panel = document.getElementById('detail-panel');
+                if (!orderId) {
+                    panel.innerHTML = `
+                        <div class="text-center w-full">
+                            <div class="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-green-200">
+                                <i class="fa-solid fa-check text-4xl"></i>
+                            </div>
+                            <h4 class="text-gray-800 font-bold text-xl mb-1">Bàn ${escapeHtml(tableNumber)} đang trống</h4>
+                            <p class="text-gray-500 text-sm mb-6">Chưa có khách ngồi hoặc chưa lên order.</p>
+                        </div>
+                    `;
+                    return;
                 }
 
-                // B. QUÉT ĐƠN VNPAY ONLINE & VƯỢT RÀO CHẶN POPUP CỦA TRÌNH DUYỆT
-                let apiRes = await fetch('/Staff/Staff/GetUnprintedPayments');
-                if (apiRes.ok) {
-                    let onlineOrders = await apiRes.json();
+                panel.innerHTML = `
+                    <div class="text-center w-full">
+                        <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-4"></i>
+                        <p class="text-gray-500 font-medium text-sm">Đang tải hóa đơn bàn ${escapeHtml(tableNumber)}...</p>
+                    </div>
+                `;
 
-                    if (isFirstLoad) {
-                        // Lần đầu load trang: Ghi nhớ các đơn đã Completed cũ, KHÔNG TẢI XUỐNG để tránh spam
-                        onlineOrders.forEach(o => {
-                            if (!processedOrders.includes(o.id)) processedOrders.push(o.id);
-                        });
-                        isFirstLoad = false;
+                try {
+                    let response = await fetch(`/Staff/Staff/GetOrderDetails?orderId=${orderId}`);
+                    let order = await response.json();
+                    let itemsList = order.items || order.Items || order.orderDetails || order.OrderDetails || [];
+                    let itemsHtml = '';
+                    let calculatedTotal = 0;
+
+                    if (itemsList.length > 0) {
+                        itemsHtml = itemsList.map((i, index) => {
+                            let rawName = i.DishName || i.dishName || i.Name || i.name || 'Món ăn';
+                            let price = i.FinalPrice || i.finalPrice || i.BasePrice || i.basePrice || i.Price || i.price || 0;
+                            let qty = i.Quantity || i.quantity || 1;
+                            calculatedTotal += (price * qty);
+
+                            let safeName = escapeHtml(rawName);
+
+                            let optionsHtml = '';
+                            let opts = i.SelectedOptions || i.selectedOptions;
+                            if (opts && Array.isArray(opts) && opts.length > 0) {
+                                let optTexts = opts.map(o => {
+                                    if (typeof o === 'string' && o.startsWith('{')) { try { o = JSON.parse(o); } catch (e) { } }
+                                    if (typeof o === 'object') {
+                                        let optName = o.name || o.Name || o.OptionName || o.value || o.Value || '';
+                                        let optPrice = o.extraPrice || o.ExtraPrice || 0;
+                                        if (optPrice > 0) return `${escapeHtml(optName)} (+${optPrice.toLocaleString('vi-VN')}đ)`;
+                                        return escapeHtml(optName);
+                                    }
+                                    return escapeHtml(o);
+                                });
+                                let cleanOpts = optTexts.filter(t => t !== '').join(' • ');
+                                if (cleanOpts) {
+                                    optionsHtml = `<p class="text-[11.5px] text-gray-500 font-medium mt-0.5"><i class="fa-solid fa-tags text-[10px] mr-1"></i> ${cleanOpts}</p>`;
+                                }
+                            }
+
+                            let noteHtml = '';
+                            let rawNote = i.Note || i.note || i.ItemNote || i.itemNote;
+                            if (rawNote && rawNote.trim() !== '') {
+                                let safeNote = escapeHtml(rawNote);
+                                let noteId = `note-${index}-${Date.now()}`;
+                                noteHtml = `
+                                    <div class="mt-1.5">
+                                        <button onclick="document.getElementById('${noteId}').classList.toggle('hidden')" class="text-[11px] text-orange-600 font-bold bg-orange-50 hover:bg-orange-100 border border-orange-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5">
+                                            <i class="fa-regular fa-comment-dots"></i> Xem ghi chú của khách
+                                        </button>
+                                        <div id="${noteId}" class="hidden mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800 italic shadow-sm">
+                                            <span class="font-bold">Ghi chú:</span> ${safeNote}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            return `
+                                <div class="flex justify-between items-start py-3 border-b border-gray-100 text-left">
+                                    <div class="flex-1 pr-3">
+                                        <p class="font-bold text-gray-800 text-base">${safeName}</p>
+                                        <p class="text-xs text-gray-500 mb-0.5">SL: ${qty} x ${price.toLocaleString('vi-VN')}đ</p>
+                                        ${optionsHtml}
+                                        ${noteHtml}
+                                    </div>
+                                    <p class="font-bold text-blue-600 whitespace-nowrap pt-1 text-base">${(price * qty).toLocaleString('vi-VN')}đ</p>
+                                </div>`;
+                        }).join('');
                     } else {
-                        // Từ lần thứ 2 trở đi (nghĩa là đang trực quầy): Phát hiện đơn mới là tải ngay
-                        onlineOrders.forEach(order => {
-                            if (!processedOrders.includes(order.id)) {
-                                console.log("Phát hiện đơn Online mới, tự động tải hóa đơn: ", order.id);
-                                processedOrders.push(order.id); // Đánh dấu để không tải trùng
+                        itemsHtml = '<div class="text-center text-gray-400 py-8"><i class="fa-solid fa-box-open text-3xl mb-2 block opacity-30"></i> Chưa có món nào.</div>';
+                    }
 
-                                // CÁCH MỚI: Tải file ngầm không bị trình duyệt chặn
-                                let downloadLink = document.createElement('a');
-                                downloadLink.href = `/Staff/Staff/ExportInvoicePdf?orderId=${order.id}&paymentMethod=${encodeURIComponent("Thanh toán qua VNPay")}`;
-                                downloadLink.style.display = 'none';
-                                document.body.appendChild(downloadLink);
-                                downloadLink.click();
-                                document.body.removeChild(downloadLink);
+                    let safeStatus = escapeHtml(order.status || order.Status);
+                    let safeOrderId = escapeHtml(order.id || order.Id);
+
+                    panel.innerHTML = `
+                        <div class="w-full h-full flex flex-col text-left">
+                            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                                <h3 class="font-bold text-xl text-gray-800">Bàn ${escapeHtml(tableNumber)}</h3>
+                                <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold uppercase">${safeStatus}</span>
+                            </div>
+                            <div class="flex-1 overflow-y-auto pr-2 mb-4 max-h-[300px]">
+                                ${itemsHtml}
+                            </div>
+                            <div class="bg-gray-100 p-4 rounded-xl mt-auto">
+                                <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-3">
+                                    <span class="text-gray-600 font-medium">Tổng thanh toán:</span>
+                                    <span class="text-2xl font-black text-red-600">${calculatedTotal.toLocaleString('vi-VN')} đ</span>
+                                </div>
+                                <button onclick="payOrder('${safeOrderId}', '${escapeHtml(tableNumber)}')" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition shadow-md flex items-center justify-center gap-2 mb-2">
+                                    <i class="fa-solid fa-print text-lg"></i> <span class="tracking-wide">XÁC NHẬN THANH TOÁN & IN BILL</span>
+                                </button>
+                                <button onclick="printInvoice('${safeOrderId}')" class="w-full bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 font-bold py-2 rounded-xl transition text-xs flex items-center justify-center gap-1 mt-1">
+                                    <i class="fa-solid fa-redo"></i> In lại hóa đơn
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } catch (error) {
+                    panel.innerHTML = `<p class="text-red-500 text-center">Lỗi tải dữ liệu. Vui lòng thử lại!</p>`;
+                }
+            }
+
+            async function payOrder(orderId, tableNumber) {
+                if (!confirm(`Xác nhận thanh toán cho Bàn ${tableNumber}?\nHệ thống sẽ dọn bàn và tự động tải file hóa đơn.`)) return;
+                let formData = new FormData();
+                formData.append("orderId", orderId);
+                formData.append("paymentMethod", "Tại quầy");
+
+                try {
+                    let res = await fetch('/Staff/Staff/Checkout', { method: 'POST', body: formData });
+                    let data = await res.json();
+                    if (data.success) {
+                        window.open(`/Staff/Staff/ExportInvoicePdf?orderId=${orderId}&paymentMethod=${encodeURIComponent("Thanh toán tại quầy")}`, '_blank');
+                        processedOrders.push(orderId);
+                        setTimeout(() => { window.location.reload(); }, 1200);
+                    } else { alert(data.message); }
+                } catch (e) { alert("Lỗi hệ thống khi thanh toán!"); }
+            }
+
+            function printInvoice(orderId) {
+                window.open(`/Staff/Staff/ExportInvoicePdf?orderId=${orderId}&paymentMethod=In lại`, '_blank');
+            }
+
+            let isFirstLoad = true;
+
+            setInterval(async () => {
+                try {
+                    let res = await fetch(window.location.href);
+                    let text = await res.text();
+                    let doc = new DOMParser().parseFromString(text, 'text/html');
+                    let newGrid = doc.getElementById('table-grid-container');
+                    let oldGrid = document.getElementById('table-grid-container');
+
+                    if (newGrid && oldGrid) {
+                        let callingTables = newGrid.querySelectorAll('[data-needs-service="true"]');
+                        callingTables.forEach(el => {
+                            let tNum = el.getAttribute('data-table-number');
+
+                            if (!notifiedTables.includes(tNum)) {
+                                notifiedTables.push(tNum);
+                                alertSound.play().catch(e => console.log("Trình duyệt chặn autoplay âm thanh", e));
+
+                                let toastContainer = document.getElementById('toast-container');
+                                let toastHtml = `
+                                    <div id="toast-${escapeHtml(tNum)}" class="pointer-events-auto bg-white border-l-4 border-yellow-500 shadow-2xl rounded-xl p-4 flex items-center gap-4 w-80 animate-[bounce_1s_ease-in-out]">
+                                        <div class="bg-yellow-100 text-yellow-600 w-12 h-12 flex items-center justify-center rounded-full flex-shrink-0 animate-pulse">
+                                            <i class="fa-solid fa-bell text-2xl"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <h4 class="font-bold text-gray-800 text-lg uppercase">Bàn ${escapeHtml(tNum)}</h4>
+                                            <p class="text-sm text-gray-500">Đang gọi phục vụ!</p>
+                                        </div>
+                                        <button onclick="acceptCall('${escapeHtml(tNum)}')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition">
+                                            OK
+                                        </button>
+                                    </div>
+                                `;
+                                toastContainer.insertAdjacentHTML('beforeend', toastHtml);
                             }
                         });
+
+                        oldGrid.innerHTML = newGrid.innerHTML;
+
+                        // Mấu chốt để không bị văng về trang 1 mỗi 5s là gọi lại hàm này:
+                        renderPagination();
                     }
+
+                    let apiRes = await fetch('/Staff/Staff/GetUnprintedPayments');
+                    if (apiRes.ok) {
+                        let onlineOrders = await apiRes.json();
+                        if (isFirstLoad) {
+                            onlineOrders.forEach(o => { if (!processedOrders.includes(o.id)) processedOrders.push(o.id); });
+                            isFirstLoad = false;
+                        } else {
+                            onlineOrders.forEach(order => {
+                                if (!processedOrders.includes(order.id)) {
+                                    processedOrders.push(order.id);
+                                    let downloadLink = document.createElement('a');
+                                    downloadLink.href = `/Staff/Staff/ExportInvoicePdf?orderId=${order.id}&paymentMethod=${encodeURIComponent("Thanh toán qua VNPay")}`;
+                                    downloadLink.style.display = 'none';
+                                    document.body.appendChild(downloadLink);
+                                    downloadLink.click();
+                                    document.body.removeChild(downloadLink);
+                                }
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.log("Đang chờ đồng bộ dữ liệu...");
                 }
-            } catch (e) {
-                console.log("Đang chờ đồng bộ dữ liệu...");
-            }
-        }, 5000); // 5 giây quét 1 lần
-    </script>
+            }, 5000); 
+        </script>
