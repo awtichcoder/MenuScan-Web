@@ -28,6 +28,35 @@ namespace MenuQr.Areas.Staff.Controllers
             _tableCollection = mongoDatabase.GetCollection<DiningTable>("DiningTables");
             _orderCollection = mongoDatabase.GetCollection<ActiveOrder>("ActiveOrders");
         }
+        [HttpPost]
+[HttpPost]
+public async Task<IActionResult> ClearServiceAlert(string tableNumber)
+{
+    try
+    {
+        // 1. Tạo điều kiện tìm kiếm: Tìm bàn có table_number giống với client gửi lên
+        // Lưu ý: "table_number" là tên field trong database của bạn (như trong hình)
+        var filter = Builders<DiningTable>.Filter.Eq("table_number", tableNumber);
+
+        // 2. Tạo lệnh cập nhật: Sửa trường "needs_service" thành false
+        var update = Builders<DiningTable>.Update.Set("needs_service", false);
+
+        // 3. Thực thi update vào MongoDB
+        var result = await _tableCollection.UpdateOneAsync(filter, update);
+
+        if (result.ModifiedCount > 0 || result.MatchedCount > 0)
+        {
+            // Đã update thành công
+            return Json(new { success = true });
+        }
+        
+        return Json(new { success = false, message = "Không tìm thấy bàn này" });
+    }
+    catch (Exception ex)
+    {
+        return Json(new { success = false, message = ex.Message });
+    }
+}
 
         // ==========================================
         // 1. GIAO DIỆN CHÍNH
