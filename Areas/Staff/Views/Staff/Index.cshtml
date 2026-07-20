@@ -1,4 +1,4 @@
-@model MenuQr.Areas.Staff.Controllers.StaffDashboardViewModel
+﻿@model MenuQr.Areas.Staff.Controllers.StaffDashboardViewModel
 @{
     ViewData["Title"] = "Quản lý phục vụ";
     Layout = "~/Areas/Staff/Views/Shared/_StaffLayout.cshtml";
@@ -41,17 +41,29 @@
                     {
                         var activeOrder = Model.ActiveOrders.FirstOrDefault(o => o.TableNumber == table.TableNumber);
                         bool hasCustomer = activeOrder != null;
+                        bool needsService = table.NeedsService;
 
                         <div onclick="viewOrderDetails('@table.TableNumber', '@(hasCustomer ? activeOrder.Id.ToString() : "")')"
                              class="relative cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-md rounded-2xl p-4 border-2 flex flex-col items-center text-center bg-white
-                            @(hasCustomer ? "border-red-300" : "border-green-300")">
+                            @(needsService ? "border-yellow-400 bg-yellow-50" : hasCustomer ? "border-red-300" : "border-green-300")">
 
                             <h3 class="font-bold text-gray-800 text-lg mb-1">@table.Name</h3>
                             <p class="text-xs text-gray-500 font-mono mb-4 bg-gray-100 px-2 py-0.5 rounded">Mã:
                                 @table.TableNumber</p>
 
                                 <div class="mt-auto w-full">
-                                    @if (hasCustomer)
+                                    @if (needsService)
+                                    {
+                                        <span
+                                            class="inline-block bg-yellow-100 text-yellow-800 border border-yellow-300 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm mb-2">
+                                            <i class="fa-solid fa-bell mr-1"></i> Cần hỗ trợ
+                                        </span>
+                                        <button type="button" onclick="event.stopPropagation(); clearServiceRequest('@table.TableNumber')"
+                                                class="w-full bg-yellow-500 hover:bg-yellow-600 text-white text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg transition">
+                                            Đã hỗ trợ
+                                        </button>
+                                    }
+                                    else if (hasCustomer)
                                     {
                                         <span
                                             class="inline-block bg-red-100 text-red-700 border border-red-200 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm">
@@ -96,6 +108,24 @@
     <script>
         // Mảng lưu vết các hóa đơn đã in tự động để tránh bị tải xuống trùng lặp
         let processedOrders = [];
+
+        async function clearServiceRequest(tableNumber) {
+            let formData = new FormData();
+            formData.append("tableNumber", tableNumber);
+
+            try {
+                let res = await fetch('/Staff/Staff/ClearServiceRequest', { method: 'POST', body: formData });
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    alert("Không thể cập nhật trạng thái hỗ trợ.");
+                }
+            } catch (e) {
+                alert("Lỗi kết nối khi cập nhật trạng thái hỗ trợ.");
+            }
+        }
+
+
 
         // ==========================================
         // 1. HÀM LOAD CHI TIẾT MÓN ĂN & TÍNH TỔNG TIỀN

@@ -1,4 +1,4 @@
-using CloudinaryDotNet;
+﻿using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using MenuQr.Areas.Admin.Models;
 using MenuQr.Models;
@@ -51,7 +51,7 @@ namespace MenuQr.Areas.Admin.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(string id)
         {
-            var dish = await _dishCollection.Find(d => d.Id == id && !d.IsDeleted).FirstOrDefaultAsync();
+            var dish = await _dishCollection.Find(d => d.Id == id && d.IsDeleted != true).FirstOrDefaultAsync();
             if (dish == null) return NotFound("Khong tim thay mon an.");
 
             ViewBag.Categories = await _categoryCollection.Find(c => c.IsActive).SortBy(c => c.Name).ToListAsync();
@@ -106,7 +106,7 @@ namespace MenuQr.Areas.Admin.Controllers
         [HttpPut("/api/admin/dishes/{id}")]
         public async Task<IActionResult> UpdateDish(string id, [FromBody] Dish model)
         {
-            var existing = await _dishCollection.Find(d => d.Id == id && !d.IsDeleted).FirstOrDefaultAsync();
+            var existing = await _dishCollection.Find(d => d.Id == id && d.IsDeleted != true).FirstOrDefaultAsync();
             if (existing == null)
                 return NotFound(new { success = false, code = "MS01", message = "Mon an khong ton tai." });
 
@@ -138,7 +138,7 @@ namespace MenuQr.Areas.Admin.Controllers
         [HttpDelete("/api/admin/dishes/{id}")]
         public async Task<IActionResult> DeleteDish(string id)
         {
-            var dish = await _dishCollection.Find(d => d.Id == id && !d.IsDeleted).FirstOrDefaultAsync();
+            var dish = await _dishCollection.Find(d => d.Id == id && d.IsDeleted != true).FirstOrDefaultAsync();
             if (dish == null)
                 return NotFound(new { success = false, code = "MS01", message = "Mon an khong ton tai." });
 
@@ -192,7 +192,7 @@ namespace MenuQr.Areas.Admin.Controllers
             page = Math.Max(1, page);
             limit = Math.Clamp(limit, 1, 100);
 
-            var filter = Builders<Dish>.Filter.Eq(d => d.IsDeleted, false);
+            var filter = Builders<Dish>.Filter.Ne(d => d.IsDeleted, true);
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {
@@ -233,7 +233,7 @@ namespace MenuQr.Areas.Admin.Controllers
 
             var escaped = System.Text.RegularExpressions.Regex.Escape(dish.Name.Trim());
             var filter = Builders<Dish>.Filter.Eq(d => d.CategoryId, dish.CategoryId);
-            filter &= Builders<Dish>.Filter.Eq(d => d.IsDeleted, false);
+            filter &= Builders<Dish>.Filter.Ne(d => d.IsDeleted, true);
             filter &= Builders<Dish>.Filter.Regex(d => d.Name, new BsonRegularExpression($"^{escaped}$", "i"));
 
             if (!string.IsNullOrEmpty(currentId))

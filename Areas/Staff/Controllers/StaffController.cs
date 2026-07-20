@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using MenuQr.Models;
 using MenuQr.Areas.Admin.Models;
@@ -67,6 +67,21 @@ public async Task<IActionResult> Index()
         // ==========================================
         // 2. LẤY CHI TIẾT ĐƠN HÀNG (AJAX CỦA NHÂN VIÊN)
         // ==========================================
+        [HttpPost]
+        public async Task<IActionResult> ClearServiceRequest(string tableNumber)
+        {
+            if (string.IsNullOrWhiteSpace(tableNumber))
+            {
+                return BadRequest(new { success = false, message = "Không xác định được bàn." });
+            }
+
+            await _tableCollection.UpdateOneAsync(
+                t => t.TableNumber == tableNumber && t.IsActive,
+                Builders<DiningTable>.Update.Set(t => t.NeedsService, false));
+
+            return Ok(new { success = true });
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetOrderDetails(string orderId)
         {
@@ -170,6 +185,7 @@ public async Task<IActionResult> Index()
                                 .Set(o => o.Items, order.Items); // Cập nhật luôn trạng thái món thành Paid
                                 
                 await _orderCollection.UpdateOneAsync(o => o.Id == orderId, update);
+                await _tableCollection.UpdateOneAsync(t => t.TableNumber == order.TableNumber, Builders<DiningTable>.Update.Set(t => t.NeedsService, false));
 
                 return Json(new { success = true, message = "Thanh toán thành công!" });
             }

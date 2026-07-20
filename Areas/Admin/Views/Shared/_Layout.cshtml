@@ -1,5 +1,22 @@
+﻿@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    string NavClass(string controller)
+    {
+        var baseClass = "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors";
+        return string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
+            ? $"{baseClass} bg-[#F3C178]/10 text-[#F3C178] font-bold"
+            : $"{baseClass} text-gray-600 hover:bg-gray-50 hover:text-[#F3C178]";
+    }
+
+    string NavTextClass(string controller)
+    {
+        return string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
+            ? "font-bold"
+            : "font-medium";
+    }
+}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 
 <head>
     <meta charset="utf-8" />
@@ -27,34 +44,29 @@
             </div>
 
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-                <a href="/Admin/Revenue/Index"
-                   class="flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-[#F3C178] transition-colors">
+                <a href="/Admin/Revenue/Index" class="@NavClass("Revenue")">
                     <i class="fa-solid fa-chart-pie w-5 text-center"></i>
-                    <span class="font-medium">Tổng quan</span>
+                    <span class="@NavTextClass("Revenue")">Tổng quan</span>
                 </a>
 
-                <a asp-area="Admin" asp-controller="Table" asp-action="Index"
-                   class="flex items-center gap-3 px-4 py-3 bg-[#F3C178]/10 text-[#F3C178] rounded-xl font-bold transition-colors">
+                <a href="/Admin/Table/Index" class="@NavClass("Table")">
                     <i class="fa-solid fa-qrcode w-5 text-center"></i>
-                    <span>Quản lý Bàn / QR</span>
+                    <span class="@NavTextClass("Table")">Quản lý Bàn / QR</span>
                 </a>
 
-                <a href="/Admin/Category/Index"
-                   class="flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-[#F3C178] transition-colors">
+                <a href="/Admin/Category/Index" class="@NavClass("Category")">
                     <i class="fa-solid fa-layer-group w-5 text-center"></i>
-                    <span class="font-medium">Danh mục món</span>
+                    <span class="@NavTextClass("Category")">Danh mục món</span>
                 </a>
 
-                <a href="/Admin/Dish/Index"
-                   class="flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-[#F3C178] transition-colors">
+                <a href="/Admin/Dish/Index" class="@NavClass("Dish")">
                     <i class="fa-solid fa-burger w-5 text-center"></i>
-                    <span class="font-medium">Thực đơn</span>
+                    <span class="@NavTextClass("Dish")">Thực đơn</span>
                 </a>
 
-                <a href="/Admin/Promotion/Index"
-                   class="flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-[#F3C178] transition-colors">
+                <a href="/Admin/Promotion/Index" class="@NavClass("Promotion")">
                     <i class="fa-solid fa-percent w-5 text-center"></i>
-                    <span class="font-medium">Khuyến mãi</span>
+                    <span class="@NavTextClass("Promotion")">Khuyến mãi</span>
                 </a>
             </nav>
 
@@ -68,7 +80,7 @@
                         <p class="text-sm font-bold text-gray-800">@(User.Identity?.Name ?? "Admin")</p>
                         <form asp-area="" asp-controller="Account" asp-action="Logout" method="post">
                             @Html.AntiForgeryToken()
-                            <button type="submit" class="text-xs text-red-500 hover:underline">Dang xuat</button>
+                            <button type="submit" class="text-xs text-red-500 hover:underline">Đăng xuất</button>
                         </form>
                     </div>
                 </div>
@@ -108,11 +120,11 @@
 
     <script>
         function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
 
-        sidebar.classList.toggle('-translate-x-full');
-        overlay.classList.toggle('hidden');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
         }
     </script>
 

@@ -1,4 +1,4 @@
-using MenuQr.Models;
+﻿using MenuQr.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
@@ -48,14 +48,14 @@ namespace MenuQr.Areas.Admin.Controllers
         public async Task<IActionResult> Create(string tableNumber, string name)
         {
             if (string.IsNullOrWhiteSpace(tableNumber) || string.IsNullOrWhiteSpace(name))
-                return BadRequest(new { success = false, code = "MS01", message = "Vui long nhap ma ban va ten ban." });
+                return BadRequest(new { success = false, code = "MS01", message = "Vui lòng nhập mã bàn và tên bàn." });
 
             tableNumber = tableNumber.Trim();
             name = name.Trim();
 
             var existingName = await _tableCollection.Find(t => t.Name == name && t.IsActive).FirstOrDefaultAsync();
             if (existingName != null)
-                return BadRequest(new { success = false, code = "MS03", message = "Ten ban nay da ton tai." });
+                return BadRequest(new { success = false, code = "MS03", message = "Tên bàn này đã tồn tại." });
 
             var existing = await _tableCollection.Find(t => t.TableNumber == tableNumber).FirstOrDefaultAsync();
             if (existing != null)
@@ -64,10 +64,10 @@ namespace MenuQr.Areas.Admin.Controllers
                 {
                     var update = Builders<DiningTable>.Update.Set(t => t.IsActive, true).Set(t => t.Name, name);
                     await _tableCollection.UpdateOneAsync(t => t.Id == existing.Id, update);
-                    return Json(new { success = true, code = "MS06", message = "Kich hoat lai ban cu thanh cong." });
+                    return Json(new { success = true, code = "MS06", message = "Kích hoạt lại bàn cũ thành công." });
                 }
 
-                return BadRequest(new { success = false, code = "MS02", message = "Ma ban nay da ton tai." });
+                return BadRequest(new { success = false, code = "MS02", message = "Mã bàn này đã tồn tại." });
             }
 
             var table = new DiningTable
@@ -79,7 +79,7 @@ namespace MenuQr.Areas.Admin.Controllers
             };
 
             await _tableCollection.InsertOneAsync(table);
-            return Json(new { success = true, code = "MS06", message = "Them ban thanh cong." });
+            return Json(new { success = true, code = "MS06", message = "Thêm bàn thành công." });
         }
 
         [HttpPost("/api/admin/tables")]
@@ -92,23 +92,23 @@ namespace MenuQr.Areas.Admin.Controllers
         public async Task<IActionResult> DeleteSoft(string tableNumber)
         {
             if (string.IsNullOrWhiteSpace(tableNumber))
-                return BadRequest(new { success = false, code = "MS02", message = "Khong tim thay ban yeu cau." });
+                return BadRequest(new { success = false, code = "MS02", message = "Không tìm thấy bàn yêu cầu." });
 
             var hasActiveOrder = await _activeOrderCollection
                 .Find(o => o.TableNumber == tableNumber && o.Status == "Serving")
                 .AnyAsync();
 
             if (hasActiveOrder)
-                return BadRequest(new { success = false, code = "MS01", message = "Khong the xoa ban dang co don hang chua hoan tat." });
+                return BadRequest(new { success = false, code = "MS01", message = "Không thể xóa bàn đang có đơn hàng chưa hoàn tất." });
 
             var result = await _tableCollection.UpdateOneAsync(
                 t => t.TableNumber == tableNumber && t.IsActive,
                 Builders<DiningTable>.Update.Set(t => t.IsActive, false));
 
             if (result.ModifiedCount > 0)
-                return Json(new { success = true, code = "MS05", message = "Xoa ban thanh cong." });
+                return Json(new { success = true, code = "MS05", message = "Xóa bàn thành công." });
 
-            return NotFound(new { success = false, code = "MS02", message = "Khong tim thay ban yeu cau." });
+            return NotFound(new { success = false, code = "MS02", message = "Không tìm thấy bàn yêu cầu." });
         }
 
         [HttpDelete("/api/admin/tables/{tableNumber}")]
@@ -122,7 +122,7 @@ namespace MenuQr.Areas.Admin.Controllers
         {
             var table = await _tableCollection.Find(t => t.TableNumber == tableNumber && t.IsActive).FirstOrDefaultAsync();
             if (table == null)
-                return NotFound(new { success = false, code = "MS01", message = "Khong tim thay ban." });
+                return NotFound(new { success = false, code = "MS01", message = "Không tìm thấy bàn." });
 
             var url = BuildOrderUrl(table.TableNumber);
             return Ok(new { success = true, code = "MS06", url, qrCode = GenerateQrBase64(url) });
@@ -148,7 +148,7 @@ namespace MenuQr.Areas.Admin.Controllers
         public async Task<IActionResult> ExportSinglePdf(string tableNumber)
         {
             var table = await _tableCollection.Find(t => t.TableNumber == tableNumber && t.IsActive).FirstOrDefaultAsync();
-            if (table == null) return NotFound("Khong tim thay ban hoat dong.");
+            if (table == null) return NotFound("Không tìm thấy bàn hoạt động.");
 
             using var stream = new MemoryStream();
             var document = new PdfDocument();
@@ -175,7 +175,7 @@ namespace MenuQr.Areas.Admin.Controllers
 
         private string BuildOrderUrl(string tableNumber)
         {
-            return $"{Request.Scheme}://{Request.Host}/Home/?tableId={tableNumber}";
+            return $"{Request.Scheme}://{Request.Host}/Home/Index?tableId={tableNumber}";
         }
 
         private void DrawQrCodeVector(XGraphics gfx, string text, double x, double y, double size)
