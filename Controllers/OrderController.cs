@@ -446,6 +446,9 @@ public async Task<IActionResult> ConfirmPendingItems(string tableId)
                 .Set(o => o.UpdatedAt, order.UpdatedAt);
 
             await _activeOrderCollection.UpdateOneAsync(o => o.Id == order.Id, update);
+            
+            // Broadcast real-time signal via SignalR
+            await _staffHub.Clients.All.SendAsync("NewOrder", tableId);
         }
     }
     

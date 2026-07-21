@@ -1,4 +1,4 @@
-﻿using MongoDB.Bson;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using System;
 
@@ -24,7 +24,5 @@ namespace MenuQr.Models
 
         [BsonElement("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
-        [BsonElement("needs_service")]
-        public bool NeedsService { get; set; } = false;// Trạng thái bàn (có cần phục vụ hay không)
     }
 }

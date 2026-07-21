@@ -101,6 +101,9 @@ public class AccountController : Controller
         if (principal.IsInRole("Staff"))
             return RedirectToAction("Index", "Staff", new { area = "Staff" });
 
+        if (principal.IsInRole("Kitchen") || principal.IsInRole("Chef"))
+            return RedirectToAction("Index", "Kitchen", new { area = "Chef" });
+
         return RedirectToAction("Index", "Home");
     }
 
@@ -108,6 +111,7 @@ public class AccountController : Controller
     {
         await UpsertDefaultUserAsync("admin", "admin123", "Quan tri vien", "Admin");
         await UpsertDefaultUserAsync("staff", "staff123", "Nhan vien", "Staff");
+        await UpsertDefaultUserAsync("kitchen", "kitchen123", "Bếp Trưởng", "Kitchen");
 
         await _dbContext.SaveChangesAsync();
     }
