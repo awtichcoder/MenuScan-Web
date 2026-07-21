@@ -79,20 +79,146 @@
     </div>
 </div>
 
+<!-- Modal chọn lý do tạm ẩn -->
+<div id="hide-reason-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <!-- Overlay backdrop -->
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="cancelHideReason()"></div>
+    
+    <!-- Modal Dialog -->
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-gray-150 transform transition-all animate-[fadeIn_0.2s_ease-out]">
+        <!-- Modal Header -->
+        <div class="flex justify-between items-center pb-3 border-b border-gray-100">
+            <h3 class="text-sm font-extrabold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-eye-slash text-orange-500"></i>
+                LÝ DO TẠM ẨN MÓN ĂN
+            </h3>
+            <button onclick="cancelHideReason()" class="text-gray-400 hover:text-gray-600 transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="py-4 space-y-3">
+            <p class="text-xs text-gray-600 font-semibold">
+                Tạm ẩn món: <span id="modal-dish-name" class="font-extrabold text-gray-900 text-sm">...</span>
+            </p>
+
+            <label class="text-[10px] font-extrabold uppercase text-gray-400 tracking-wider block">Chọn lý do điều chỉnh</label>
+            
+            <div class="flex flex-col gap-2.5">
+                <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-orange-50/50 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50/50">
+                    <input type="radio" name="hide-reason" value="Hết nguyên liệu" checked onchange="toggleOtherReasonInput(false)" class="w-4 h-4 text-orange-500 accent-orange-500">
+                    <span class="text-xs font-bold text-gray-700">Hết nguyên liệu</span>
+                </label>
+                
+                <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-orange-50/50 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50/50">
+                    <input type="radio" name="hide-reason" value="Đổi thực đơn" onchange="toggleOtherReasonInput(false)" class="w-4 h-4 text-orange-500 accent-orange-500">
+                    <span class="text-xs font-bold text-gray-700">Đổi thực đơn</span>
+                </label>
+
+                <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-orange-50/50 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50/50">
+                    <input type="radio" name="hide-reason" value="Khác" onchange="toggleOtherReasonInput(true)" class="w-4 h-4 text-orange-500 accent-orange-500">
+                    <span class="text-xs font-bold text-gray-700">Khác...</span>
+                </label>
+            </div>
+
+            <div id="other-reason-container" class="hidden mt-2">
+                <input type="text" id="other-reason-input" placeholder="Nhập lý do khác..." 
+                       class="w-full text-xs font-semibold px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500" />
+            </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="flex justify-end gap-2.5 pt-3 border-t border-gray-100">
+            <button onclick="cancelHideReason()" class="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-gray-50 transition">
+                Hủy
+            </button>
+            <button onclick="confirmHideReason()" class="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5">
+                <i class="fa-solid fa-check"></i>
+                Xác nhận Tạm Ẩn
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
-    // Async Toggle request directly
+    let pendingHideDishId = null;
+
     async function toggleDish(dishId) {
         const checkbox = document.getElementById(`switch-${dishId}`);
-        const badge = document.getElementById(`avail-badge-${dishId}`);
         const isChecked = checkbox.checked;
 
-        // Optimistically update the UI badge
-        updateLocalBadge(dishId, isChecked);
+        if (!isChecked) {
+            // Revert switch visually until reason confirmed
+            checkbox.checked = true;
+            
+            // Get dish name
+            const card = document.querySelector(`[data-dish-id="${dishId}"]`);
+            const name = card ? card.querySelector('h4').innerText : '';
+            
+            // Open modal
+            openHideReasonModal(dishId, name);
+        } else {
+            // Turning back available
+            await performToggle(dishId, true);
+        }
+    }
 
+    function openHideReasonModal(dishId, dishName) {
+        pendingHideDishId = dishId;
+        document.getElementById('modal-dish-name').innerText = dishName;
+        
+        // Reset inputs
+        document.querySelectorAll('input[name="hide-reason"]')[0].checked = true;
+        document.getElementById('other-reason-input').value = '';
+        document.getElementById('other-reason-container').classList.add('hidden');
+        
+        document.getElementById('hide-reason-modal').classList.remove('hidden');
+    }
+
+    function cancelHideReason() {
+        if (pendingHideDishId) {
+            const checkbox = document.getElementById(`switch-${pendingHideDishId}`);
+            if (checkbox) checkbox.checked = true;
+        }
+        document.getElementById('hide-reason-modal').classList.add('hidden');
+        pendingHideDishId = null;
+    }
+
+    function toggleOtherReasonInput(show) {
+        const container = document.getElementById('other-reason-container');
+        if (show) {
+            container.classList.remove('hidden');
+            document.getElementById('other-reason-input').focus();
+        } else {
+            container.classList.add('hidden');
+        }
+    }
+
+    async function confirmHideReason() {
+        if (!pendingHideDishId) return;
+        const dishId = pendingHideDishId;
+        
+        const selectedReason = document.querySelector('input[name="hide-reason"]:checked').value;
+        let finalReason = selectedReason;
+        if (selectedReason === 'Khác') {
+            const custom = document.getElementById('other-reason-input').value.trim();
+            finalReason = custom ? "Khác: " + custom : "Khác";
+        }
+        
+        document.getElementById('hide-reason-modal').classList.add('hidden');
+        pendingHideDishId = null;
+
+        await performToggle(dishId, false, finalReason);
+    }
+
+    async function performToggle(dishId, isAvailable, reason = null) {
+        const checkbox = document.getElementById(`switch-${dishId}`);
         try {
             const formData = new FormData();
             formData.append("dishId", dishId);
-            formData.append("isAvailable", isChecked);
+            formData.append("isAvailable", isAvailable);
+            if (reason) formData.append("reason", reason);
 
             const res = await fetch('/Chef/Kitchen/ToggleDishAvailability', {
                 method: 'POST',
@@ -100,15 +226,17 @@
             });
 
             const data = await res.json();
-            if (!data.success) {
-                // Revert on failure
-                checkbox.checked = !isChecked;
-                updateLocalBadge(dishId, !isChecked);
+            if (data.success) {
+                checkbox.checked = isAvailable;
+                updateLocalBadge(dishId, isAvailable);
+            } else {
+                checkbox.checked = !isAvailable;
+                updateLocalBadge(dishId, !isAvailable);
                 alert(data.message || "Không thể cập nhật trạng thái món!");
             }
         } catch (e) {
-            checkbox.checked = !isChecked;
-            updateLocalBadge(dishId, !isChecked);
+            checkbox.checked = !isAvailable;
+            updateLocalBadge(dishId, !isAvailable);
             alert("Lỗi kết nối máy chủ!");
         }
     }
