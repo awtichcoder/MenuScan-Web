@@ -13,7 +13,7 @@
                 <i class="fa-solid fa-layer-group text-orange-500"></i>
                 GOM MÓN CHẾ BIẾN THEO DANH MỤC
             </h2>
-            <p class="text-xs text-gray-400 mt-0.5">Tự động gom nhóm các món cùng loại từ các bàn khác nhau để nấu hàng loạt hiệu quả.</p>
+            <p class="text-xs text-gray-400 mt-0.5">Tự động gom nhóm các món cùng loại theo danh mục để chuẩn bị nguyên liệu và nấu hàng loạt hiệu quả.</p>
         </div>
         
         <!-- Filter Row -->
@@ -23,15 +23,17 @@
                 <span class="font-bold text-gray-400 uppercase text-[10px] tracking-wider">Danh mục gom món:</span>
                 <div class="flex flex-wrap gap-2 items-center">
                     <button type="button" id="cat-pill-all" onclick="toggleAllCategories()" 
-                            class="px-4 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm bg-orange-500 text-white border-orange-500 active:scale-95">
+                            class="px-4 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm bg-orange-500 text-white border-orange-500 active:scale-95 flex items-center gap-1.5">
                         Tất cả
+                        <span id="cat-badge-all" class="bg-white/20 text-white rounded-md px-1.5 py-0.5 text-[9px] font-black font-mono">0</span>
                     </button>
                     <div class="w-px h-5 bg-gray-200 mx-1 hidden sm:block"></div>
                     @foreach (var cat in categories)
                     {
                         <button type="button" id="cat-pill-@cat.Id" onclick="toggleCategory('@cat.Id')" 
-                                class="cat-pill px-4 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm bg-white text-gray-600 border-gray-250 hover:bg-gray-50 active:scale-95">
+                                class="cat-pill px-4 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm bg-white text-gray-650 border-gray-250 hover:bg-gray-50 active:scale-95 flex items-center gap-1.5">
                             @cat.Name
+                            <span id="cat-badge-@cat.Id" class="bg-gray-100 text-gray-400 rounded-md px-1.5 py-0.5 text-[9px] font-black font-mono">0</span>
                         </button>
                     }
                 </div>
@@ -60,30 +62,22 @@
         </div>
     </div>
 
-    <!-- Modern Tabular Grid -->
-    <div class="flex-1 overflow-y-auto bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-        <table class="w-full border-collapse text-left flex-1">
-            <thead>
-                <tr class="bg-gray-50 border-b border-gray-200 select-none">
-                    <th class="px-6 py-3.5 text-center text-gray-500 font-bold text-xs uppercase tracking-wider w-[80px]">STT</th>
-                    <th class="px-6 py-3.5 text-left text-gray-500 font-bold text-xs uppercase tracking-wider">Tên Món Chi Tiết</th>
-                    <th class="px-6 py-3.5 text-left text-gray-500 font-bold text-xs uppercase tracking-wider">Danh sách bàn phân bổ</th>
-                    <th class="px-6 py-3.5 text-center text-gray-500 font-bold text-xs uppercase tracking-wider w-[160px]">Tổng số lượng</th>
-                </tr>
-            </thead>
-            <tbody id="batch-table-body" class="divide-y divide-gray-150">
-                <!-- Table rows will render dynamically via JS -->
-            </tbody>
-            <tfoot>
-                <tr class="bg-gray-50 border-t border-gray-200 text-gray-800 font-bold select-none shrink-0">
-                    <td class="px-6 py-5 text-left font-black text-sm uppercase text-gray-700" colspan="2">TỔNG CỘNG GOM MÓN</td>
-                    <td class="px-6 py-5 text-right font-extrabold text-xs tracking-wide uppercase text-gray-400" colspan="2">
-                        SỐ LƯỢNG MÓN CẦN CHẾ BIẾN TRONG ĐỢT: 
-                        <span id="total-sum" class="text-2xl font-black text-orange-600 font-mono mx-1.5">0</span> món
-                    </td>
-                </tr>
-            </tfoot>
-        </table>
+    <!-- Slips Container for Category Groups -->
+    <div id="batch-slips-container" class="flex-1 overflow-y-auto pr-1">
+        <!-- Separate category tables (BM07 style slips) will render dynamically here -->
+    </div>
+
+    <!-- Grand Total Summary Bar at the bottom -->
+    <div class="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-5 shadow-lg shadow-orange-500/10 mt-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0 select-none text-white">
+        <span class="text-sm font-black uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-fire-burner text-lg animate-bounce"></i>
+            TỔNG SỐ LƯỢNG MÓN CẦN CHẾ BIẾN TRONG ĐỢT
+        </span>
+        <div class="flex items-center gap-2 self-end sm:self-auto">
+            <span class="text-xs font-extrabold opacity-90 uppercase">TỔNG CỘNG:</span>
+            <span id="total-sum" class="bg-white text-orange-600 rounded-xl px-4 py-1.5 text-2xl font-black font-mono shadow-md">0</span>
+            <span class="text-xs font-extrabold uppercase">phần ăn</span>
+        </div>
     </div>
 </div>
 
@@ -94,6 +88,11 @@
     // Initialise category pills
     const allCategoryIds = [@Html.Raw(string.Join(",", categories.Select(c => $"'{c.Id}'")))];
     let activeCategories = [...allCategoryIds]; // Copy initially all selected
+
+    // Dictionary to look up Category Name by ID
+    const categoriesMap = {
+        @Html.Raw(string.Join(",", categories.Select(c => $"'{c.Id}': '{c.Name.Replace("'", "\\'")}'")))
+    };
 
     // Trigger update of time when page loads
     function updateGomTime() {
@@ -131,44 +130,100 @@
         renderTable();
     }
 
-    // Dynamic UI styling update for pills
+    // Dynamic UI styling update for pills and category counts
     function updatePillsUI() {
         const allBtn = document.getElementById('cat-pill-all');
+        const allBadge = document.getElementById('cat-badge-all');
         const isAllSelected = activeCategories.length === allCategoryIds.length;
 
+        // Compute counts based on rawBatchData
+        const counts = {};
+        let grandTotal = 0;
+        allCategoryIds.forEach(id => {
+            counts[id] = 0;
+        });
+        rawBatchData.forEach(item => {
+            if (counts[item.categoryId] !== undefined) {
+                counts[item.categoryId] += item.totalQuantity;
+            }
+            grandTotal += item.totalQuantity;
+        });
+
+        // Style "Tất cả" pill
         if (isAllSelected) {
-            allBtn.className = "px-4 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm bg-orange-500 text-white border-orange-500 active:scale-95";
+            allBtn.className = "px-4 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm bg-orange-500 text-white border-orange-500 active:scale-95 flex items-center gap-1.5";
+            if (allBadge) {
+                allBadge.innerText = grandTotal;
+                allBadge.className = "bg-white/20 text-white rounded-md px-1.5 py-0.5 text-[9px] font-black font-mono";
+            }
         } else {
-            allBtn.className = "px-4 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm bg-white text-gray-500 border-gray-250 hover:bg-gray-50 hover:text-gray-800 active:scale-95";
+            allBtn.className = "px-4 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm bg-white text-gray-500 border-gray-250 hover:bg-gray-50 hover:text-gray-800 active:scale-95 flex items-center gap-1.5";
+            if (allBadge) {
+                allBadge.innerText = grandTotal;
+                allBadge.className = "bg-gray-100 text-gray-400 rounded-md px-1.5 py-0.5 text-[9px] font-black font-mono";
+            }
         }
 
         allCategoryIds.forEach(id => {
             const pill = document.getElementById(`cat-pill-${id}`);
+            const badge = document.getElementById(`cat-badge-${id}`);
             if (!pill) return;
+
+            const count = counts[id] || 0;
+            if (badge) {
+                badge.innerText = count;
+            }
 
             const isSelected = activeCategories.includes(id);
             if (isSelected) {
-                pill.className = "cat-pill px-4 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm bg-orange-50 text-orange-650 border-orange-200 hover:bg-orange-100 active:scale-95";
+                pill.className = "cat-pill px-4 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm bg-orange-50 text-orange-655 border-orange-200 hover:bg-orange-100 active:scale-95 flex items-center gap-1.5";
+                if (badge) {
+                    badge.className = "bg-orange-200/60 text-orange-700 rounded-md px-1.5 py-0.5 text-[9px] font-black font-mono";
+                }
             } else {
-                pill.className = "cat-pill px-4 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm bg-white text-gray-650 border-gray-250 hover:bg-gray-50 hover:text-gray-800 active:scale-95";
+                pill.className = "cat-pill px-4 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm bg-white text-gray-650 border-gray-250 hover:bg-gray-50 hover:text-gray-800 active:scale-95 flex items-center gap-1.5";
+                if (badge) {
+                    badge.className = "bg-gray-100 text-gray-400 rounded-md px-1.5 py-0.5 text-[9px] font-black font-mono";
+                }
             }
         });
     }
 
     // Dynamic renderer to keep STT numbers sequential and compute total count
     function renderTable() {
-        const tbody = document.getElementById('batch-table-body');
+        const container = document.getElementById('batch-slips-container');
         const query = document.getElementById('batch-search').value.toLowerCase().trim();
         
-        let html = '';
-        let stt = 1;
-        let grandTotal = 0;
-
+        // Group rawBatchData by categoryId
+        const groups = {};
         rawBatchData.forEach(item => {
             const matchCategory = activeCategories.includes(item.categoryId);
             const matchSearch = item.dishName.toLowerCase().includes(query);
 
             if (matchCategory && matchSearch) {
+                if (!groups[item.categoryId]) {
+                    groups[item.categoryId] = [];
+                }
+                groups[item.categoryId].push(item);
+            }
+        });
+
+        let slipsHtml = '';
+        let grandTotal = 0;
+        let totalCategoriesCount = 0;
+
+        // Loop through categories to preserve sorted order
+        allCategoryIds.forEach(catId => {
+            const items = groups[catId];
+            if (!items || items.length === 0) return;
+
+            totalCategoriesCount++;
+            const categoryName = categoriesMap[catId] || 'Danh mục khác';
+            let categoryTotal = 0;
+            let rowsHtml = '';
+            let stt = 1;
+
+            items.forEach(item => {
                 // Table chips formatting (Modern pill tags)
                 const tableChips = item.tableDetails.map(t => {
                     let noteText = t.note 
@@ -192,8 +247,8 @@
                     ? `<div class="text-xs text-gray-400 font-semibold italic mt-1"><i class="fa-solid fa-circle-info text-[9px] mr-1"></i>${item.optionsText}</div>` 
                     : '';
 
-                html += `
-                    <tr class="hover:bg-gray-50/40 transition-colors">
+                rowsHtml += `
+                    <tr class="hover:bg-gray-50/40 transition-colors bg-white">
                         <td class="px-6 py-4 text-center">
                             <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-500 font-mono text-xs font-bold">${stt}</span>
                         </td>
@@ -204,27 +259,59 @@
                         <td class="px-6 py-4">${tableListHtml}</td>
                         <td class="px-6 py-4 text-center">
                             <div class="flex justify-center">
-                                <span class="w-9 h-9 rounded-full bg-orange-50 border border-orange-100 text-orange-600 font-black text-center flex items-center justify-center text-sm shadow-sm">${item.totalQuantity}</span>
+                                <span class="w-9 h-9 rounded-full bg-orange-50 border border-orange-100 text-orange-600 font-black text-center flex items-center justify-center text-sm shadow-sm font-mono">${item.totalQuantity}</span>
                             </div>
                         </td>
                     </tr>
                 `;
                 stt++;
-                grandTotal += item.totalQuantity;
-            }
+                categoryTotal += item.totalQuantity;
+            });
+
+            grandTotal += categoryTotal;
+
+            slipsHtml += `
+                <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col mb-8 last:mb-0">
+                    <!-- Slip Header -->
+                    <div class="bg-gray-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center select-none">
+                        <h3 class="font-extrabold text-gray-800 text-sm tracking-wider uppercase flex items-center gap-2">
+                            <i class="fa-solid fa-receipt text-orange-500 text-base"></i>
+                            DANH MỤC: ${escapeHtml(categoryName)}
+                        </h3>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500 text-white font-extrabold text-xs shadow-md shadow-orange-500/10 select-none">
+                            <i class="fa-solid fa-fire text-[10px] animate-pulse"></i>
+                            CẦN CHẾ BIẾN:
+                            <span class="bg-white text-orange-600 rounded-lg px-2 py-0.5 text-xs font-black font-mono shadow-sm">${categoryTotal}</span>
+                        </span>
+                    </div>
+                    
+                    <!-- Slip Table -->
+                    <table class="w-full border-collapse text-left">
+                        <thead>
+                            <tr class="bg-yellow-300 border-b border-gray-250 select-none">
+                                <th class="px-6 py-3.5 text-center text-[#d32f2f] font-black text-xs uppercase tracking-wider w-[80px]">STT</th>
+                                <th class="px-6 py-3.5 text-left text-[#d32f2f] font-black text-xs uppercase tracking-wider">Tên Món Chi Tiết</th>
+                                <th class="px-6 py-3.5 text-left text-[#d32f2f] font-black text-xs uppercase tracking-wider">Danh sách bàn (Số lượng)</th>
+                                <th class="px-6 py-3.5 text-center text-[#d32f2f] font-black text-xs uppercase tracking-wider w-[160px]">Tổng số lượng</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-150">
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
         });
 
-        tbody.innerHTML = html || `
-            <tr>
-                <td colspan="4" class="px-6 py-16 text-center text-gray-450 font-bold bg-gray-50/10">
-                    <i class="fa-solid fa-box-open text-4xl mb-3 block opacity-25 text-gray-300"></i>
-                    Không có món ăn nào cần chế biến.
-                </td>
-            </tr>
+        container.innerHTML = slipsHtml || `
+            <div class="bg-white border border-gray-200 rounded-2xl p-16 text-center text-gray-400 font-bold shadow-sm">
+                <i class="fa-solid fa-box-open text-4xl mb-3 block opacity-25 text-gray-300"></i>
+                Không có món ăn nào cần chế biến.
+            </div>
         `;
 
         document.getElementById('total-sum').innerText = grandTotal;
-        document.getElementById('table-summary-desc').innerText = `Tìm thấy ${stt - 1} loại món cần nấu (Tổng cộng ${grandTotal} phần ăn).`;
+        document.getElementById('table-summary-desc').innerText = `Tìm thấy ${totalCategoriesCount} danh mục có món cần nấu (Tổng cộng ${grandTotal} phần ăn).`;
     }
 
     // Real-time synchronization callback via SignalR
@@ -243,6 +330,7 @@
                 rawBatchData = JSON.parse(dataJson.textContent);
                 renderTable();
                 updateGomTime();
+                updatePillsUI();
             }
         } catch (e) {
             console.error("Lỗi cập nhật: ", e);
