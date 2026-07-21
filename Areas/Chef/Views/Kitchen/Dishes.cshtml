@@ -79,20 +79,239 @@
     </div>
 </div>
 
+<!-- BM08 Modal -->
+<div id="bm08-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <!-- Overlay backdrop -->
+    <div class="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm" onclick="closeBm08Modal()"></div>
+    
+    <!-- Modal Content -->
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden transform transition-all p-6 border border-gray-150 animate-[fadeIn_0.2s_ease-out]">
+        <!-- Title bar -->
+        <div class="flex justify-between items-center pb-4 border-b border-gray-150">
+            <h3 class="text-sm font-extrabold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-file-invoice text-orange-500"></i>
+                BM08: PHIẾU CẬP NHẬT TRẠNG THÁI THỰC ĐƠN BẾP (NV 19)
+            </h3>
+            <button onclick="closeBm08Modal()" class="text-gray-400 hover:text-gray-650 transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        
+        <!-- Form Details -->
+        <div class="py-4 space-y-4 text-gray-800">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Thời gian lập</label>
+                    <span id="bm08-time" class="text-sm font-semibold text-gray-700 block mt-0.5">...</span>
+                </div>
+            </div>
+            
+            <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">Lý do điều chỉnh</label>
+                <div class="flex flex-col gap-2">
+                    <label class="flex items-center gap-3 cursor-pointer text-sm font-medium text-gray-700">
+                        <input type="radio" name="bm08-reason" value="Hết nguyên liệu" checked onchange="toggleReasonText(false)" class="w-4 h-4 text-orange-500 accent-orange-500 focus:ring-orange-500 border-gray-300">
+                        Hết nguyên liệu
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer text-sm font-medium text-gray-700">
+                        <input type="radio" name="bm08-reason" value="Đổi thực đơn" onchange="toggleReasonText(false)" class="w-4 h-4 text-orange-500 accent-orange-500 focus:ring-orange-500 border-gray-300">
+                        Đổi thực đơn
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer text-sm font-medium text-gray-700">
+                        <input type="radio" name="bm08-reason" value="Khác" onchange="toggleReasonText(true)" class="w-4 h-4 text-orange-500 accent-orange-500 focus:ring-orange-500 border-gray-300">
+                        Khác...
+                    </label>
+                </div>
+                <div id="bm08-reason-other-container" class="mt-2 hidden">
+                    <input type="text" id="bm08-reason-other" placeholder="Nhập lý do khác..." class="w-full text-xs font-semibold px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[#F3C178] focus:ring-1 focus:ring-[#F3C178]">
+                </div>
+            </div>
+            
+            <!-- Table Preview -->
+            <div class="border border-gray-200 rounded-xl overflow-hidden">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-yellow-300 text-yellow-900 border-b border-gray-200 font-extrabold uppercase">
+                            <th class="px-4 py-2 text-center w-12">STT</th>
+                            <th class="px-4 py-2">Mã Món</th>
+                            <th class="px-4 py-2">Tên Món</th>
+                            <th class="px-4 py-2 text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="bg-white hover:bg-gray-50 border-b border-gray-100 last:border-0 font-medium">
+                            <td class="px-4 py-2.5 text-center text-gray-500">1</td>
+                            <td id="bm08-dish-code" class="px-4 py-2.5 font-bold text-gray-600">M-01</td>
+                            <td id="bm08-dish-name" class="px-4 py-2.5 font-bold text-gray-800">Mì hải sản</td>
+                            <td class="px-4 py-2.5 text-center">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-650 border border-red-200 uppercase">
+                                    [X] Tạm ẩn
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex justify-end gap-3 pt-4 border-t border-gray-150">
+            <button onclick="cancelBm08()" class="px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-50 transition">
+                Hủy bỏ
+            </button>
+            <button onclick="confirmAndPrintBm08()" class="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-650 hover:to-amber-650 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-1.5">
+                <i class="fa-solid fa-print"></i>
+                Xác nhận & In phiếu
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Print Only Section container -->
+<div id="print-section" class="hidden">
+    <div class="print-container">
+        <h2 class="print-title">PHIẾU CẬP NHẬT TRẠNG THÁI THỰC ĐƠN BẾP</h2>
+        <div class="print-info">
+            <p><strong>Thời gian lập:</strong> <span id="print-time">...</span></p>
+            <p><strong>Lý do điều chỉnh:</strong> <span id="print-reason">...</span></p>
+        </div>
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Mã Món</th>
+                    <th>Tên Món</th>
+                    <th>Hành động (Đánh dấu X)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td id="print-dish-code">...</td>
+                    <td id="print-dish-name">...</td>
+                    <td>[X] Tạm ẩn</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="print-signatures">
+            <div class="sig-box">
+                <p class="sig-title">Người lập phiếu</p>
+                <p class="sig-sub">(Ký và ghi rõ họ tên)</p>
+            </div>
+            <div class="sig-box">
+                <p class="sig-title">Bếp trưởng</p>
+                <p class="sig-sub">(Ký và xác nhận)</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+        #print-section, #print-section * {
+            visibility: visible;
+        }
+        #print-section {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            display: block !important;
+        }
+        .print-container {
+            border: 2px solid #000;
+            padding: 24px;
+            font-family: "Times New Roman", Times, serif;
+            color: #000;
+            background: #fff;
+        }
+        .print-title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+        }
+        .print-info {
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 30px;
+        }
+        .print-table th, .print-table td {
+            border: 1px solid #000;
+            padding: 8px 12px;
+            text-align: left;
+            font-size: 14px;
+        }
+        .print-table th {
+            font-weight: bold;
+            background-color: #f2f2f2 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .print-signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            font-size: 14px;
+        }
+        .sig-box {
+            text-align: center;
+            width: 45%;
+        }
+        .sig-title {
+            font-weight: bold;
+        }
+        .sig-sub {
+            font-style: italic;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+    }
+</style>
+
 <script>
+    let currentPendingDishId = null;
+
     // Async Toggle request
     async function toggleDish(dishId) {
         const checkbox = document.getElementById(`switch-${dishId}`);
-        const badge = document.getElementById(`avail-badge-${dishId}`);
         const isChecked = checkbox.checked;
 
-        // Optimistically update the UI badge
-        updateLocalBadge(dishId, isChecked);
+        // If toggling from TRUE (available) to FALSE (unavailable / hide)
+        if (!isChecked) {
+            // Keep switch checked visually until user confirms modal
+            checkbox.checked = true;
+            
+            // Get dish details from the DOM
+            const card = document.querySelector(`[data-dish-id="${dishId}"]`);
+            const dishName = card.querySelector('h4').innerText;
+            const dishCode = "M-" + dishId.substring(dishId.length - 4).toUpperCase();
+            
+            // Show BM08 modal
+            showBm08Modal(dishId, dishName, dishCode);
+        } else {
+            // Toggling back to available: perform directly without BM08
+            await performToggle(dishId, true);
+        }
+    }
 
+    async function performToggle(dishId, isAvailable) {
+        const checkbox = document.getElementById(`switch-${dishId}`);
         try {
             const formData = new FormData();
             formData.append("dishId", dishId);
-            formData.append("isAvailable", isChecked);
+            formData.append("isAvailable", isAvailable);
 
             const res = await fetch('/Chef/Kitchen/ToggleDishAvailability', {
                 method: 'POST',
@@ -100,17 +319,98 @@
             });
 
             const data = await res.json();
-            if (!data.success) {
-                // Revert on failure
-                checkbox.checked = !isChecked;
-                updateLocalBadge(dishId, !isChecked);
+            if (data.success) {
+                checkbox.checked = isAvailable;
+                updateLocalBadge(dishId, isAvailable);
+            } else {
+                checkbox.checked = !isAvailable;
+                updateLocalBadge(dishId, !isAvailable);
                 alert(data.message || "Không thể cập nhật trạng thái món!");
             }
         } catch (e) {
-            checkbox.checked = !isChecked;
-            updateLocalBadge(dishId, !isChecked);
+            checkbox.checked = !isAvailable;
+            updateLocalBadge(dishId, !isAvailable);
             alert("Lỗi kết nối máy chủ!");
         }
+    }
+
+    function showBm08Modal(dishId, dishName, dishCode) {
+        currentPendingDishId = dishId;
+        
+        // Populate modal data
+        document.getElementById('bm08-dish-name').innerText = dishName;
+        document.getElementById('bm08-dish-code').innerText = dishCode;
+        
+        // Format time
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + 
+                        now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        document.getElementById('bm08-time').innerText = timeStr;
+        
+        // Reset reason choices
+        document.querySelectorAll('input[name="bm08-reason"]')[0].checked = true;
+        document.getElementById('bm08-reason-other').value = '';
+        document.getElementById('bm08-reason-other-container').classList.add('hidden');
+        
+        // Open modal
+        document.getElementById('bm08-modal').classList.remove('hidden');
+    }
+
+    function closeBm08Modal() {
+        document.getElementById('bm08-modal').classList.add('hidden');
+        currentPendingDishId = null;
+    }
+
+    function cancelBm08() {
+        // Revert checkbox state
+        if (currentPendingDishId) {
+            const checkbox = document.getElementById(`switch-${currentPendingDishId}`);
+            if (checkbox) checkbox.checked = true;
+        }
+        closeBm08Modal();
+    }
+
+    function toggleReasonText(show) {
+        const otherContainer = document.getElementById('bm08-reason-other-container');
+        if (show) {
+            otherContainer.classList.remove('hidden');
+            document.getElementById('bm08-reason-other').focus();
+        } else {
+            otherContainer.classList.add('hidden');
+        }
+    }
+
+    async function confirmAndPrintBm08() {
+        if (!currentPendingDishId) return;
+        
+        const dishId = currentPendingDishId;
+        const card = document.querySelector(`[data-dish-id="${dishId}"]`);
+        const dishName = card.querySelector('h4').innerText;
+        const dishCode = document.getElementById('bm08-dish-code').innerText;
+        const timeStr = document.getElementById('bm08-time').innerText;
+        
+        // Get Selected Reason
+        const reasonRadio = document.querySelector('input[name="bm08-reason"]:checked').value;
+        let finalReason = reasonRadio;
+        if (reasonRadio === 'Khác') {
+            const otherText = document.getElementById('bm08-reason-other').value.trim();
+            finalReason = otherText ? "Khác: " + otherText : "Khác";
+        }
+        
+        // Populate print section elements
+        document.getElementById('print-time').innerText = timeStr;
+        document.getElementById('print-reason').innerText = finalReason;
+        document.getElementById('print-dish-code').innerText = dishCode;
+        document.getElementById('print-dish-name').innerText = dishName;
+        
+        // Close modal first
+        closeBm08Modal();
+        
+        // Trigger system print
+        window.print();
+        
+        // Perform API request to update to unavailable
+        await performToggle(dishId, false);
     }
 
     // Update Badge styling locally
