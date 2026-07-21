@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using MenuQr.Models;
 using MenuQr.Areas.Admin.Models;
@@ -14,6 +14,17 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace MenuQr.Areas.Staff.Controllers
 {
+    public class StaffAddItemRequest
+    {
+        public string OrderId { get; set; } = null!;
+        public string DishId { get; set; } = null!;
+        public string DishName { get; set; } = null!;
+        public decimal Price { get; set; }
+        public int Quantity { get; set; } = 1;
+        // Bổ sung List Option để nhận dữ liệu Topping từ Giao diện
+        public List<SelectedOption> SelectedOptions { get; set; } = new List<SelectedOption>();
+    }
+
     [Area("Staff")] 
     [Authorize(Roles = "Admin,Staff")]
     public class StaffController : Controller
@@ -28,70 +39,160 @@ namespace MenuQr.Areas.Staff.Controllers
             _tableCollection = mongoDatabase.GetCollection<DiningTable>("DiningTables");
             _orderCollection = mongoDatabase.GetCollection<ActiveOrder>("ActiveOrders");
         }
-        [HttpPost]
-[HttpPost]
-public async Task<IActionResult> ClearServiceAlert(string tableNumber)
-{
-    try
-    {
-        // 1. Tạo điều kiện tìm kiếm: Tìm bàn có table_number giống với client gửi lên
-        // Lưu ý: "table_number" là tên field trong database của bạn (như trong hình)
-        var filter = Builders<DiningTable>.Filter.Eq("table_number", tableNumber);
 
-        // 2. Tạo lệnh cập nhật: Sửa trường "needs_service" thành false
-        var update = Builders<DiningTable>.Update.Set("needs_service", false);
-
-        // 3. Thực thi update vào MongoDB
-        var result = await _tableCollection.UpdateOneAsync(filter, update);
-
-        if (result.ModifiedCount > 0 || result.MatchedCount > 0)
-        {
-            // Đã update thành công
-            return Json(new { success = true });
-        }
-        
-        return Json(new { success = false, message = "Không tìm thấy bàn này" });
-    }
-    catch (Exception ex)
-    {
-        return Json(new { success = false, message = ex.Message });
-    }
-}
-
-        // ==========================================
-        // 1. GIAO DIỆN CHÍNH
-        // ==========================================
         [HttpGet]
-public async Task<IActionResult> Index()
-{
-    ViewBag.StaffName = "Nhân viên ca sáng";
-
-    var tables = await _tableCollection.Find(t => t.IsActive).ToListAsync();
-    var activeOrders = await _orderCollection.Find(o => o.Status != "Completed" && o.Status != "Cancelled").ToListAsync();
-
-    foreach (var order in activeOrders)
-    {
-        if (order.Items != null)
+        public async Task<IActionResult> GetAllDishes()
         {
-            // Lọc giữ lại món đã xác nhận
-            order.Items = order.Items.Where(i => i.ItemStatus == "Ordered" || i.ItemStatus == "Cooking" || i.ItemStatus == "Served").ToList();
+            try
+            {
+                var dishesCollection = _tableCollection.Database.GetCollection<Dish>("Dishes");
+                var dishes = await dishesCollection.Find(d => d.IsAvailable).ToListAsync();
+
+                var result = dishes.Select(d => new {
+                    id = d.Id,
+                    name = d.Name,
+                    price = d.BasePrice,
+                    specifications = d.Specifications // Gửi kèm thông tin Option cho Javascript
+                });
+
+                return Json(result);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
-    }
 
-    // ==========================================================
-    // THÊM DÒNG NÀY ĐỂ SỬA LỖI TRẠNG THÁI BÀN:
-    // Lọc bỏ luôn những đơn hàng mà sau khi lọc món xong chẳng còn món nào (toàn món nháp)
-    // ==========================================================
-    activeOrders = activeOrders.Where(o => o.Items != null && o.Items.Count > 0).ToList();
+        [HttpPost]
+        public async Task<IActionResult> AddItemToOrder([FromBody] StaffAddItemRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request.OrderId))
+                    return Json(new { success = false, message = "Thiếu thông tin mã đơn hàng!" });
 
-    var staffDashboard = new StaffDashboardViewModel
-    {
-        Tables = tables,
-        ActiveOrders = activeOrders
-    };
+                var filter = Builders<ActiveOrder>.Filter.Eq(o => o.Id, request.OrderId);
+                
+                // Tính tổng tiền Topping
+                decimal extraPriceTotal = request.SelectedOptions != null ? request.SelectedOptions.Sum(o => o.ExtraPrice) : 0;
+                decimal finalPrice = request.Price + extraPriceTotal;
+                
+                var newItem = new ActiveOrderItem 
+                { 
+                    DishId = request.DishId, 
+                    DishName = request.DishName,
+                    Quantity = request.Quantity,
+                    BasePrice = request.Price,           
+                    FinalPrice = finalPrice, // Đã cộng tiền topping        
+                    SelectedOptions = request.SelectedOptions ?? new List<SelectedOption>(),
+                    ItemStatus = "Ordered",              
+                    OrderedAt = DateTime.Now
+                };
+                
+                var update = Builders<ActiveOrder>.Update
+                    .Push(o => o.Items, newItem)
+                    .Set(o => o.UpdatedAt, DateTime.Now);
+                    
+                var result = await _orderCollection.UpdateOneAsync(filter, update);
+                
+                if (result.ModifiedCount > 0)
+                {
+                    return Json(new { success = true, message = "Thêm món thành công!" });
+                }
+                
+                return Json(new { success = false, message = "Không tìm thấy đơn hàng trên hệ thống." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Lỗi Server: " + ex.Message });
+            }
+        }
 
-    return View(staffDashboard);
-}
+        [HttpPost]
+        public async Task<IActionResult> CreateTakeaway()
+        {
+            try
+            {
+                string randomId = new Random().Next(1000, 9999).ToString();
+                string tableCode = "TKW-" + randomId; 
+                string tableName = "Mang Đi #" + randomId; 
+
+                var newTable = new DiningTable 
+                {
+                    TableNumber = tableCode,
+                    Name = tableName,
+                    IsActive = true,
+                    NeedsService = false
+                };
+                await _tableCollection.InsertOneAsync(newTable);
+
+                var newOrder = new ActiveOrder 
+                {
+                    TableNumber = tableCode,
+                    Status = "SERVING", 
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now,
+                    Items = new List<ActiveOrderItem>()
+                };
+                
+                await _orderCollection.InsertOneAsync(newOrder); 
+
+                return Json(new { success = true, tableNumber = tableCode, orderId = newOrder.Id });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ClearServiceAlert(string tableNumber)
+        {
+            try
+            {
+                var filter = Builders<DiningTable>.Filter.Eq("table_number", tableNumber);
+                var update = Builders<DiningTable>.Update.Set("needs_service", false);
+                var result = await _tableCollection.UpdateOneAsync(filter, update);
+
+                if (result.ModifiedCount > 0 || result.MatchedCount > 0)
+                {
+                    return Json(new { success = true });
+                }
+                
+                return Json(new { success = false, message = "Không tìm thấy bàn này" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Index()
+        {
+            ViewBag.StaffName = "Nhân viên ca sáng";
+
+            var tables = await _tableCollection.Find(t => t.IsActive).ToListAsync();
+            var activeOrders = await _orderCollection.Find(o => o.Status != "Completed" && o.Status != "Cancelled").ToListAsync();
+
+            foreach (var order in activeOrders)
+            {
+                if (order.Items != null)
+                {
+                    order.Items = order.Items.Where(i => i.ItemStatus == "Ordered" || i.ItemStatus == "Cooking" || i.ItemStatus == "Served").ToList();
+                }
+            }
+
+            activeOrders = activeOrders.Where(o => o.Items != null && o.Items.Count > 0).ToList();
+
+            var staffDashboard = new StaffDashboardViewModel
+            {
+                Tables = tables,
+                ActiveOrders = activeOrders
+            };
+
+            return View(staffDashboard);
+        }
 
         // ==========================================
         // 2. LẤY CHI TIẾT ĐƠN HÀNG (AJAX CỦA NHÂN VIÊN)
@@ -110,7 +211,6 @@ public async Task<IActionResult> Index()
 
             return Ok(new { success = true });
         }
-
         [HttpGet]
         public async Task<IActionResult> GetOrderDetails(string orderId)
         {
@@ -119,9 +219,6 @@ public async Task<IActionResult> Index()
             var order = await _orderCollection.Find(o => o.Id == orderId).FirstOrDefaultAsync();
             if (order == null) return NotFound();
 
-            // ====================================================================
-            // BỘ LỌC 2: Loại bỏ món Nháp khi nhân viên bấm xem chi tiết bàn
-            // ====================================================================
             if (order.Items != null)
             {
                 order.Items = order.Items.Where(i => i.ItemStatus == "Ordered" || i.ItemStatus == "Cooking" || i.ItemStatus == "Served").ToList();
@@ -130,9 +227,6 @@ public async Task<IActionResult> Index()
             return Json(order);
         }
 
-        // ==========================================
-        // 3. API THANH TOÁN (LƯU XUỐNG CẢ MONGODB VÀ SQL SERVER)
-        // ==========================================
         [HttpPost]
         public async Task<IActionResult> Checkout(string orderId, string paymentMethod)
         {
@@ -144,17 +238,14 @@ public async Task<IActionResult> Index()
                 var order = await _orderCollection.Find(o => o.Id == orderId).FirstOrDefaultAsync();
                 if (order == null) return Json(new { success = false, message = "Không tìm thấy đơn hàng!" });
 
-                // CHỈ TÍNH TIỀN NHỮNG MÓN ĐÃ XÁC NHẬN GỌI
                 var orderedItems = order.Items.Where(i => i.ItemStatus == "Ordered" || i.ItemStatus == "Served" || i.ItemStatus == "Cooking").ToList();
                 
-                // 1. TÍNH TỔNG TIỀN ĐÚNG LOGIC
                 decimal totalAmount = 0;
                 if (orderedItems.Any())
                 {
                     totalAmount = (decimal)orderedItems.Sum(i => i.FinalPrice * i.Quantity);
                 }
 
-                // 2. LƯU BẢNG ORDERS TRƯỚC (Bắt buộc để tạo Khóa Chính)
                 var sqlOrder = new Order 
                 {
                     OrderId = orderId,
@@ -166,14 +257,13 @@ public async Task<IActionResult> Index()
                 _sqlContext.Orders.Add(sqlOrder);
                 await _sqlContext.SaveChangesAsync(); 
 
-                // 3. LƯU BẢNG ORDER DETAILS
                 foreach (var item in orderedItems)
                 {
                     var detail = new OrderDetail {
                         OrderId = orderId, 
                         DishId = item.DishId,
                         DishName = item.DishName,
-                        CategoryName = "Mặc định", // Tránh lỗi null nếu SQL yêu cầu Not Null
+                        CategoryName = "Mặc định",
                         Quantity = item.Quantity,
                         BasePrice = (decimal)item.BasePrice,
                         DiscountPercent = 0,
@@ -186,7 +276,6 @@ public async Task<IActionResult> Index()
                 }
                 await _sqlContext.SaveChangesAsync(); 
 
-                // 4. LƯU BẢNG INVOICES (Đã có tổng tiền chuẩn)
                 var invoice = new Invoice 
                 { 
                     OrderId = orderId, 
@@ -200,10 +289,8 @@ public async Task<IActionResult> Index()
                 _sqlContext.Invoices.Add(invoice);
                 await _sqlContext.SaveChangesAsync(); 
 
-                // Commit Transaction khi đã lưu xong cả 3 bảng
                 await transaction.CommitAsync();
 
-                // 5. CẬP NHẬT TRẠNG THÁI MONGODB LÀ ĐÃ THANH TOÁN
                 foreach (var item in order.Items.Where(i => i.ItemStatus == "Ordered" || i.ItemStatus == "Served" || i.ItemStatus == "Cooking"))
                 {
                     item.ItemStatus = "Paid";
@@ -211,7 +298,7 @@ public async Task<IActionResult> Index()
                 var update = Builders<ActiveOrder>.Update
                                 .Set(o => o.Status, "Completed")
                                 .Set(o => o.PaidAt, DateTime.Now)
-                                .Set(o => o.Items, order.Items); // Cập nhật luôn trạng thái món thành Paid
+                                .Set(o => o.Items, order.Items); 
                                 
                 await _orderCollection.UpdateOneAsync(o => o.Id == orderId, update);
                 await _tableCollection.UpdateOneAsync(t => t.TableNumber == order.TableNumber, Builders<DiningTable>.Update.Set(t => t.NeedsService, false));
@@ -226,9 +313,6 @@ public async Task<IActionResult> Index()
             }
         }
 
-        // ==========================================
-        // 4. API QUÉT TÌM ĐƠN VNPAY ONLINE CHO CHỨC NĂNG REALTIME
-        // ==========================================
         [HttpGet]
         public async Task<IActionResult> GetUnprintedPayments()
         {
@@ -238,162 +322,144 @@ public async Task<IActionResult> Index()
             return Json(result);
         }
 
-        // ==========================================
-        // 5. API XUẤT HÓA ĐƠN PDF
-        // ==========================================
         [HttpGet]
-public async Task<IActionResult> ExportInvoicePdf(string orderId, string paymentMethod)
-{
-    var order = await _orderCollection.Find(o => o.Id == orderId).FirstOrDefaultAsync();
-    if (order == null) return NotFound("Không tìm thấy đơn hàng");
-
-    using (var stream = new MemoryStream())
-    {
-        PdfDocument document = new PdfDocument();
-        document.Info.Title = $"Hoa Don - Ban {order.TableNumber}";
-
-        // Tăng chiều dài trang PDF lên 250mm để tránh bị cắt chữ nếu khách gọi nhiều món
-        PdfPage page = document.AddPage();
-        page.Width = XUnit.FromMillimeter(80);  
-        page.Height = XUnit.FromMillimeter(250); 
-        XGraphics gfx = XGraphics.FromPdfPage(page);
-
-        // Khai báo bộ font "Đẹp"
-        XFont fontTitle = new XFont("Arial", 16, XFontStyleEx.Bold);
-        XFont fontSubTitle = new XFont("Arial", 9, XFontStyleEx.Regular);
-        XFont fontBold = new XFont("Arial", 10, XFontStyleEx.Bold);
-        XFont fontRegular = new XFont("Arial", 9, XFontStyleEx.Regular);
-        XFont fontSmallItalic = new XFont("Arial", 8, XFontStyleEx.Italic);
-
-        // Bút vẽ đường nét đứt (Giống máy in nhiệt)
-        XPen dashedPen = new XPen(XColors.Gray, 1);
-        dashedPen.DashStyle = XDashStyle.Dash;
-
-        int yPosition = 15; 
-
-        // 1. HEADER (TÊN QUÁN & THÔNG TIN)
-        gfx.DrawString("THE COFFEE HOUSE", fontTitle, XBrushes.Black, new XRect(0, yPosition, page.Width, 20), XStringFormats.Center);
-        yPosition += 20;
-        gfx.DrawString("ĐC: 123 Nguyễn Văn Cừ, Quận 5, TP.HCM", fontSubTitle, XBrushes.DarkGray, new XRect(0, yPosition, page.Width, 15), XStringFormats.Center);
-        yPosition += 15;
-        gfx.DrawString("Tel: 0909 123 456", fontSubTitle, XBrushes.DarkGray, new XRect(0, yPosition, page.Width, 15), XStringFormats.Center);
-        yPosition += 20;
-
-        gfx.DrawString("PHIẾU THANH TOÁN", new XFont("Arial", 12, XFontStyleEx.Bold), XBrushes.Black, new XRect(0, yPosition, page.Width, 20), XStringFormats.Center);
-        yPosition += 25;
-        
-        // 2. THÔNG TIN BÀN & THỜI GIAN
-        gfx.DrawString($"Bàn: {order.TableNumber}", fontBold, XBrushes.Black, 5, yPosition);
-        gfx.DrawString($"Ngày: {DateTime.Now:dd/MM/yy HH:mm}", fontRegular, XBrushes.Black, page.Width - 110, yPosition);
-        yPosition += 15;
-        gfx.DrawString($"Số HĐ: #{orderId.Substring(orderId.Length - 6).ToUpper()}", fontRegular, XBrushes.Black, 5, yPosition); // Lấy 6 mã đuôi của ID làm mã hóa đơn
-        yPosition += 15;
-
-        gfx.DrawLine(dashedPen, 5, yPosition, page.Width - 5, yPosition);
-        yPosition += 10;
-
-        // 3. TIÊU ĐỀ CỘT MÓN ĂN
-        gfx.DrawString("TÊN MÓN", fontBold, XBrushes.Black, 5, yPosition);
-        gfx.DrawString("SL", fontBold, XBrushes.Black, page.Width - 75, yPosition);
-        gfx.DrawString("T.TIỀN", fontBold, XBrushes.Black, page.Width - 45, yPosition);
-        yPosition += 15;
-        gfx.DrawLine(dashedPen, 5, yPosition, page.Width - 5, yPosition);
-        yPosition += 10;
-
-        // 4. DANH SÁCH MÓN ĂN
-        double totalAmount = 0;
-        dynamic items = order.GetType().GetProperty("Items")?.GetValue(order, null) ?? order.GetType().GetProperty("items")?.GetValue(order, null);
-
-        if (items != null)
+        public async Task<IActionResult> ExportInvoicePdf(string orderId, string paymentMethod)
         {
-            foreach (var item in items)
+            var order = await _orderCollection.Find(o => o.Id == orderId).FirstOrDefaultAsync();
+            if (order == null) return NotFound("Không tìm thấy đơn hàng");
+
+            using (var stream = new MemoryStream())
             {
-                var itemType = item.GetType();
-                var nameProp = itemType.GetProperty("DishName") ?? itemType.GetProperty("Name");
-                string name = nameProp?.GetValue(item)?.ToString() ?? "Món ăn";
+                PdfDocument document = new PdfDocument();
+                document.Info.Title = $"Hoa Don - Ban {order.TableNumber}";
 
-                var priceProp = itemType.GetProperty("FinalPrice") ?? itemType.GetProperty("BasePrice");
-                double price = Convert.ToDouble(priceProp?.GetValue(item) ?? 0);
+                PdfPage page = document.AddPage();
+                page.Width = XUnit.FromMillimeter(80);  
+                page.Height = XUnit.FromMillimeter(250); 
+                XGraphics gfx = XGraphics.FromPdfPage(page);
 
-                var qtyProp = itemType.GetProperty("Quantity");
-                int qty = Convert.ToInt32(qtyProp?.GetValue(item) ?? 1);
-                double subTotal = price * qty;
-                totalAmount += subTotal;
+                XFont fontTitle = new XFont("Arial", 16, XFontStyleEx.Bold);
+                XFont fontSubTitle = new XFont("Arial", 9, XFontStyleEx.Regular);
+                XFont fontBold = new XFont("Arial", 10, XFontStyleEx.Bold);
+                XFont fontRegular = new XFont("Arial", 9, XFontStyleEx.Regular);
+                XFont fontSmallItalic = new XFont("Arial", 8, XFontStyleEx.Italic);
 
-                // In Tên món, Số lượng, Thành tiền
-                gfx.DrawString(name, fontBold, XBrushes.Black, 5, yPosition);
-                gfx.DrawString(qty.ToString(), fontRegular, XBrushes.Black, page.Width - 70, yPosition);
-                gfx.DrawString($"{subTotal:N0}", fontRegular, XBrushes.Black, page.Width - 45, yPosition);
+                XPen dashedPen = new XPen(XColors.Gray, 1);
+                dashedPen.DashStyle = XDashStyle.Dash;
+
+                int yPosition = 15; 
+
+                gfx.DrawString("THE COFFEE HOUSE", fontTitle, XBrushes.Black, new XRect(0, yPosition, page.Width, 20), XStringFormats.Center);
+                yPosition += 20;
+                gfx.DrawString("ĐC: 123 Nguyễn Văn Cừ, Quận 5, TP.HCM", fontSubTitle, XBrushes.DarkGray, new XRect(0, yPosition, page.Width, 15), XStringFormats.Center);
+                yPosition += 15;
+                gfx.DrawString("Tel: 0909 123 456", fontSubTitle, XBrushes.DarkGray, new XRect(0, yPosition, page.Width, 15), XStringFormats.Center);
+                yPosition += 20;
+
+                gfx.DrawString("PHIẾU THANH TOÁN", new XFont("Arial", 12, XFontStyleEx.Bold), XBrushes.Black, new XRect(0, yPosition, page.Width, 20), XStringFormats.Center);
+                yPosition += 25;
+                
+                gfx.DrawString($"Bàn: {order.TableNumber}", fontBold, XBrushes.Black, 5, yPosition);
+                gfx.DrawString($"Ngày: {DateTime.Now:dd/MM/yy HH:mm}", fontRegular, XBrushes.Black, page.Width - 110, yPosition);
+                yPosition += 15;
+                gfx.DrawString($"Số HĐ: #{orderId.Substring(orderId.Length - 6).ToUpper()}", fontRegular, XBrushes.Black, 5, yPosition);
                 yPosition += 15;
 
-                // Trích xuất Options in nhỏ ở dưới (nếu có)
-               // Trích xuất Options in nhỏ ở dưới (nếu có)
-var optionsProp = itemType.GetProperty("SelectedOptions") ?? itemType.GetProperty("selectedOptions");
-var optionsVal = optionsProp?.GetValue(item);
-if (optionsVal != null)
-{
-    try
-    {
-        var optList = new List<string>();
-        var enumerable = optionsVal as System.Collections.IEnumerable;
-        
-        if (enumerable != null)
-        {
-            foreach (var opt in enumerable)
-            {
-                var optType = opt.GetType();
-                // Lấy tên tuỳ chọn
-                var namePropOpt = optType.GetProperty("Name") ?? optType.GetProperty("name") ?? optType.GetProperty("OptionName");
-                // Lấy giá phụ thu
-                var pricePropOpt = optType.GetProperty("ExtraPrice") ?? optType.GetProperty("extraPrice");
+                gfx.DrawLine(dashedPen, 5, yPosition, page.Width - 5, yPosition);
+                yPosition += 10;
 
-                string oName = namePropOpt?.GetValue(opt)?.ToString() ?? "";
-                double oPrice = Convert.ToDouble(pricePropOpt?.GetValue(opt) ?? 0);
+                gfx.DrawString("TÊN MÓN", fontBold, XBrushes.Black, 5, yPosition);
+                gfx.DrawString("SL", fontBold, XBrushes.Black, page.Width - 75, yPosition);
+                gfx.DrawString("T.TIỀN", fontBold, XBrushes.Black, page.Width - 45, yPosition);
+                yPosition += 15;
+                gfx.DrawLine(dashedPen, 5, yPosition, page.Width - 5, yPosition);
+                yPosition += 10;
 
-                if (!string.IsNullOrEmpty(oName))
+                double totalAmount = 0;
+                dynamic items = order.GetType().GetProperty("Items")?.GetValue(order, null) ?? order.GetType().GetProperty("items")?.GetValue(order, null);
+
+                if (items != null)
                 {
-                    if (oPrice > 0)
-                        optList.Add($"{oName} (+{oPrice:N0}đ)");
-                    else
-                        optList.Add(oName);
+                    foreach (var item in items)
+                    {
+                        var itemType = item.GetType();
+                        var nameProp = itemType.GetProperty("DishName") ?? itemType.GetProperty("Name");
+                        string name = nameProp?.GetValue(item)?.ToString() ?? "Món ăn";
+
+                        var priceProp = itemType.GetProperty("FinalPrice") ?? itemType.GetProperty("BasePrice");
+                        double price = Convert.ToDouble(priceProp?.GetValue(item) ?? 0);
+
+                        var qtyProp = itemType.GetProperty("Quantity");
+                        int qty = Convert.ToInt32(qtyProp?.GetValue(item) ?? 1);
+                        double subTotal = price * qty;
+                        totalAmount += subTotal;
+
+                        gfx.DrawString(name, fontBold, XBrushes.Black, 5, yPosition);
+                        gfx.DrawString(qty.ToString(), fontRegular, XBrushes.Black, page.Width - 70, yPosition);
+                        gfx.DrawString($"{subTotal:N0}", fontRegular, XBrushes.Black, page.Width - 45, yPosition);
+                        yPosition += 15;
+
+                        var optionsProp = itemType.GetProperty("SelectedOptions") ?? itemType.GetProperty("selectedOptions");
+                        var optionsVal = optionsProp?.GetValue(item);
+                        if (optionsVal != null)
+                        {
+                            try
+                            {
+                                var optList = new List<string>();
+                                var enumerable = optionsVal as System.Collections.IEnumerable;
+                                
+                                if (enumerable != null)
+                                {
+                                    foreach (var opt in enumerable)
+                                    {
+                                        var optType = opt.GetType();
+                                        var namePropOpt = optType.GetProperty("Name") ?? optType.GetProperty("name") ?? optType.GetProperty("OptionName");
+                                        var pricePropOpt = optType.GetProperty("ExtraPrice") ?? optType.GetProperty("extraPrice");
+
+                                        string oName = namePropOpt?.GetValue(opt)?.ToString() ?? "";
+                                        double oPrice = Convert.ToDouble(pricePropOpt?.GetValue(opt) ?? 0);
+
+                                        if (!string.IsNullOrEmpty(oName))
+                                        {
+                                            if (oPrice > 0)
+                                                optList.Add($"{oName} (+{oPrice:N0}đ)");
+                                            else
+                                                optList.Add(oName);
+                                        }
+                                    }
+                                }
+
+                                string cleanOpts = string.Join(" • ", optList);
+                                
+                                if (!string.IsNullOrWhiteSpace(cleanOpts))
+                                {
+                                    gfx.DrawString($"+ {cleanOpts}", fontSmallItalic, XBrushes.DarkGray, 15, yPosition);
+                                    yPosition += 12; 
+                                }
+                            }
+                            catch { } 
+                        }
+                    }
                 }
+
+                yPosition += 5;
+                gfx.DrawLine(dashedPen, 5, yPosition, page.Width - 5, yPosition);
+                yPosition += 15;
+
+                gfx.DrawString("TỔNG CỘNG:", new XFont("Arial", 11, XFontStyleEx.Bold), XBrushes.Black, 5, yPosition);
+                gfx.DrawString($"{totalAmount:N0} VNĐ", new XFont("Arial", 12, XFontStyleEx.Bold), XBrushes.Black, page.Width - 85, yPosition);
+                yPosition += 25;
+
+                gfx.DrawString($"Thanh toán: {paymentMethod}", fontSmallItalic, XBrushes.Black, new XRect(0, yPosition, page.Width, 20), XStringFormats.Center);
+                yPosition += 20;
+
+                gfx.DrawString("Xin cảm ơn và hẹn gặp lại quý khách!", fontBold, XBrushes.Black, new XRect(0, yPosition, page.Width, 20), XStringFormats.Center);
+                yPosition += 15;
+                gfx.DrawString("Powered by AwtichDev", fontSmallItalic, XBrushes.LightGray, new XRect(0, yPosition, page.Width, 20), XStringFormats.Center);
+
+                document.Save(stream, false);
+                return File(stream.ToArray(), "application/pdf", $"HoaDon_{order.TableNumber}_{DateTime.Now:HHmmss}.pdf");
             }
-        }
-
-        // Nối các option bằng dấu chấm tròn
-        string cleanOpts = string.Join(" • ", optList);
-        
-        if (!string.IsNullOrWhiteSpace(cleanOpts))
-        {
-            gfx.DrawString($"+ {cleanOpts}", fontSmallItalic, XBrushes.DarkGray, 15, yPosition);
-            yPosition += 12; // Nhích xuống 1 chút cho dòng option
-        }
-    }
-    catch { } // Bỏ qua an toàn nếu lỗi parse
-}
-            }
-        }
-
-        yPosition += 5;
-        gfx.DrawLine(dashedPen, 5, yPosition, page.Width - 5, yPosition);
-        yPosition += 15;
-
-        // 5. TỔNG TIỀN VÀ FOOTER
-        gfx.DrawString("TỔNG CỘNG:", new XFont("Arial", 11, XFontStyleEx.Bold), XBrushes.Black, 5, yPosition);
-        gfx.DrawString($"{totalAmount:N0} VNĐ", new XFont("Arial", 12, XFontStyleEx.Bold), XBrushes.Black, page.Width - 85, yPosition);
-        yPosition += 25;
-
-        gfx.DrawString($"Thanh toán: {paymentMethod}", fontSmallItalic, XBrushes.Black, new XRect(0, yPosition, page.Width, 20), XStringFormats.Center);
-        yPosition += 20;
-
-        gfx.DrawString("Xin cảm ơn và hẹn gặp lại quý khách!", fontBold, XBrushes.Black, new XRect(0, yPosition, page.Width, 20), XStringFormats.Center);
-        yPosition += 15;
-        gfx.DrawString("Powered by AwtichDev", fontSmallItalic, XBrushes.LightGray, new XRect(0, yPosition, page.Width, 20), XStringFormats.Center);
-
-        document.Save(stream, false);
-        return File(stream.ToArray(), "application/pdf", $"HoaDon_{order.TableNumber}_{DateTime.Now:HHmmss}.pdf");
-    }
-
         }
     }
 

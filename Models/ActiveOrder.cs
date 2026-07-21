@@ -82,9 +82,22 @@ namespace MenuQr.Models
         public decimal ExtraPrice { get; set; }
     }
 
-    public class AddItemRequest
+    // ... (Các class ActiveOrder, ActiveOrderItem, SelectedOption giữ nguyên) ...
+
+    // 1. Giữ nguyên class này cho hàm AddItemToMongo hiện tại của bạn chạy không bị lỗi
+public class AddItemRequest
+{
+    public string TableNumber { get; set; } = null!;
+    public ActiveOrderItem Item { get; set; } = null!;
+}
+
+// 2. TẠO THÊM CLASS MỚI NÀY: Dành riêng cho Popup xử lý Thêm món bằng mã OrderId công nghiệp
+public class StaffAddItemRequest
     {
-        public string TableNumber { get; set; } = null!;
-        public ActiveOrderItem Item { get; set; } = null!;
+        public string OrderId { get; set; } = null!;
+        public string DishId { get; set; } = null!;
+        public string DishName { get; set; } = null!;
+        public decimal Price { get; set; }
     }
+
 }
