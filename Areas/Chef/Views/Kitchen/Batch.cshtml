@@ -1,103 +1,187 @@
 @model List<MenuQr.Areas.Chef.Controllers.BatchGroupViewModel>
 @{
-    ViewData["Title"] = "Gom món Thông Minh";
+    ViewData["Title"] = "Gom món theo danh mục";
+    var categories = ViewBag.Categories as List<MenuQr.Areas.Admin.Models.Category> ?? new List<MenuQr.Areas.Admin.Models.Category>();
 }
 
 <div class="h-full flex flex-col p-6 overflow-hidden bg-gray-50">
-    <!-- Header Banner -->
-    <div class="flex flex-wrap gap-4 justify-between items-center mb-6 shrink-0 bg-white border border-gray-200 p-4 rounded-2xl shadow-sm">
-        <div>
-            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <i class="fa-solid fa-layer-group text-orange-500"></i>
-                GOM MÓN CHẾ BIẾN THÔNG MINH
-            </h2>
-            <p class="text-xs text-gray-400">Gom nhóm tự động các món giống nhau từ các bàn khác nhau để chế biến hàng loạt.</p>
+    
+    <!-- Header Block (Form title & Category checklist) -->
+    <div class="flex flex-col bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-6 shrink-0">
+        <!-- Document Title -->
+        <div class="text-center pb-5 border-b border-gray-150">
+            <p class="text-xs font-mono font-bold text-gray-400 tracking-wider">BM07: Phiếu Gom món theo danh mục</p>
+            <h2 class="text-2xl font-black text-gray-800 tracking-wider mt-1">PHIẾU GOM MÓN THEO DANH MỤC</h2>
         </div>
+        
+        <!-- Form Fields Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 pt-5 text-sm text-gray-700 items-center">
+            <!-- Gather Categories list -->
+            <div class="lg:col-span-2 flex flex-wrap items-center gap-3">
+                <span class="font-bold text-gray-500 uppercase text-xs tracking-wider">Danh mục gom:</span>
+                <div class="flex flex-wrap gap-4 items-center bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-200">
+                    <label class="flex items-center gap-1.5 cursor-pointer font-bold select-none text-gray-700">
+                        <input type="checkbox" id="cat-all" checked onchange="onCategorySelectAll(this)" class="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 border-gray-300">
+                        Tất cả
+                    </label>
+                    <div class="w-px h-4 bg-gray-300 mx-1"></div>
+                    @foreach (var cat in categories)
+                    {
+                        <label class="flex items-center gap-1.5 cursor-pointer font-bold select-none text-gray-650 hover:text-gray-900 transition-colors">
+                            <input type="checkbox" name="cat-filter" value="@cat.Id" checked onchange="onCategorySelect(this)" class="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 border-gray-300">
+                            @cat.Name
+                        </label>
+                    }
+                </div>
+            </div>
 
-        <!-- Quick Search -->
-        <div class="relative w-full sm:w-64">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-gray-400">
-                <i class="fa-solid fa-magnifying-glass text-xs"></i>
-            </span>
-            <input type="text" id="batch-search" onkeyup="filterBatchDishes()" placeholder="Tìm kiếm món ăn..."
-                   class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-850 placeholder-gray-400 text-xs font-semibold focus:outline-none focus:border-[#F3C178] focus:ring-1 focus:ring-[#F3C178] transition-all" />
+            <!-- Time field -->
+            <div class="flex items-center gap-3 lg:justify-end">
+                <span class="font-bold text-gray-500 uppercase text-xs tracking-wider">Thời gian gom:</span>
+                <span id="batch-time" class="font-mono bg-orange-50 border border-orange-200 text-orange-700 px-4 py-2 rounded-xl font-extrabold text-sm shadow-sm">
+                    ... : ...
+                </span>
+            </div>
         </div>
     </div>
 
-    <!-- Batch Grid -->
-    <div class="flex-1 overflow-y-auto pr-1">
-        @if (Model == null || !Model.Any())
-        {
-            <div class="h-full min-h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-gray-250 rounded-2xl p-12 text-center text-gray-400 bg-white shadow-sm">
-                <div class="w-16 h-16 bg-gray-50 text-gray-300 rounded-2xl flex items-center justify-center mb-4 border border-gray-100">
-                    <i class="fa-solid fa-box-open text-3xl"></i>
-                </div>
-                <h3 class="text-lg font-bold text-gray-700">Không có món cần gom chế biến</h3>
-                <p class="text-sm text-gray-400 max-w-xs mt-1">Khi khách hàng ở các bàn tiến hành gửi đơn báo bếp, các món chưa nấu sẽ xuất hiện tại đây.</p>
-            </div>
-        }
-        else
-        {
-            <div id="batch-items-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                @foreach (var item in Model)
-                {
-                    <div class="batch-item-card bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-350 hover:shadow-md" 
-                          data-dish-name="@item.DishName.ToLower()">
-                        
-                        <!-- Header / Title -->
-                        <div class="flex justify-between items-start gap-3 border-b border-gray-150 pb-3 mb-3.5">
-                            <div>
-                                <h3 class="font-extrabold text-gray-800 text-lg leading-tight">@item.DishName</h3>
-                                <div class="mt-1">
-                                    <span class="bg-gray-50 text-gray-500 text-xs font-semibold px-2 py-0.5 rounded border border-gray-200 font-mono">
-                                        @item.OptionsText
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="bg-gradient-to-tr from-orange-500 to-amber-400 text-white rounded-xl py-2 px-3 flex flex-col items-center justify-center min-w-[64px] shadow-sm shadow-orange-100">
-                                <span class="text-[9px] font-black uppercase tracking-wider opacity-90 leading-none mb-0.5">TỔNG</span>
-                                <span class="text-2xl font-black leading-none">@item.TotalQuantity</span>
-                            </div>
-                        </div>
+    <!-- Quick Search Row -->
+    <div class="flex justify-between items-center mb-4 shrink-0">
+        <span class="text-xs text-gray-400 font-semibold" id="table-summary-desc">Hiển thị danh sách món đang chờ...</span>
+        <div class="relative w-64">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                <i class="fa-solid fa-magnifying-glass text-xs"></i>
+            </span>
+            <input type="text" id="batch-search" onkeyup="renderTable()" placeholder="Tìm kiếm món ăn chi tiết..."
+                   class="w-full pl-8.5 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 text-xs font-semibold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all shadow-sm" />
+        </div>
+    </div>
 
-                        <!-- Table breakdowns -->
-                        <div class="flex-1 flex flex-col gap-2">
-                            <span class="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider mb-0.5">Chi tiết phân bổ tại các bàn:</span>
-                            @foreach (var table in item.TableDetails)
-                            {
-                                <div class="bg-gray-50 border border-gray-200/60 p-3 rounded-xl flex justify-between items-center text-xs">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-2.5 h-2.5 bg-orange-500 rounded-full animate-pulse"></div>
-                                        <span class="font-bold text-gray-700">BÀN @table.TableNumber</span>
-                                    </div>
-                                    <div class="flex items-center gap-4">
-                                        @if (!string.IsNullOrEmpty(table.Note))
-                                        {
-                                            <span class="text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded bg-orange-50 border border-orange-200 max-w-[120px] truncate" title="@table.Note">
-                                                <i class="fa-solid fa-message mr-1"></i> @table.Note
-                                            </span>
-                                        }
-                                        <span class="text-gray-400 text-[10px] font-mono">@table.OrderedAt.ToString("HH:mm")</span>
-                                        <span class="bg-white border border-gray-200 text-gray-800 px-2.5 py-1 rounded-md font-extrabold text-sm min-w-[32px] text-center shadow-sm">
-                                            x@(table.Quantity)
-                                        </span>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                }
-            </div>
-        }
+    <!-- Tabular Form Container -->
+    <div class="flex-1 overflow-y-auto bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+        <table class="w-full border-collapse text-left flex-1">
+            <!-- Yellow Header Row with red text matching document -->
+            <thead>
+                <tr class="bg-yellow-300 border-b border-gray-250 select-none">
+                    <th class="px-5 py-4 text-center text-[#d32f2f] font-black text-xs uppercase tracking-wider w-[80px]">STT</th>
+                    <th class="px-5 py-4 text-left text-[#d32f2f] font-black text-xs uppercase tracking-wider">Tên Món Chi Tiết</th>
+                    <th class="px-5 py-4 text-left text-[#d32f2f] font-black text-xs uppercase tracking-wider">Danh sách bàn (Số lượng)</th>
+                    <th class="px-5 py-4 text-center text-[#d32f2f] font-black text-xs uppercase tracking-wider w-[140px]">Tổng số lượng</th>
+                </tr>
+            </thead>
+            <tbody id="batch-table-body" class="divide-y divide-gray-200">
+                <!-- Table rows will render dynamically via JS -->
+            </tbody>
+            <!-- Footer row spanning totals -->
+            <tfoot>
+                <tr class="bg-gray-50 border-t-2 border-gray-250 text-gray-800 font-bold select-none shrink-0">
+                    <td class="px-5 py-5 text-left font-black text-sm uppercase" colspan="2">TỔNG CỘNG</td>
+                    <td class="px-5 py-5 text-right font-extrabold text-xs tracking-wide uppercase text-gray-500" colspan="2">
+                        SỐ LƯỢNG MÓN CẦN CHẾ BIẾN TRONG ĐỢT: 
+                        <span id="total-sum" class="text-2xl font-black text-[#d32f2f] font-mono mx-1.5 animate-pulse">0</span> món
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
     </div>
 </div>
 
 <script>
+    // Local data storage for reactive UI updates
+    let rawBatchData = [];
+
+    // Trigger update of time when page loads
+    function updateGomTime() {
+        const now = new Date();
+        const hrs = now.getHours().toString().padStart(2, '0');
+        const mins = now.getMinutes().toString().padStart(2, '0');
+        document.getElementById('batch-time').innerText = `${hrs}:${mins}`;
+    }
+
+    // Category filter interactions
+    function onCategorySelectAll(allCb) {
+        const checkboxes = document.querySelectorAll('input[name="cat-filter"]');
+        checkboxes.forEach(cb => {
+            cb.checked = allCb.checked;
+        });
+        renderTable();
+    }
+
+    function onCategorySelect(cb) {
+        const allCb = document.getElementById('cat-all');
+        const checkboxes = document.querySelectorAll('input[name="cat-filter"]');
+        const checkedCount = Array.from(checkboxes).filter(c => c.checked).length;
+
+        if (checkedCount === checkboxes.length) {
+            allCb.checked = true;
+            allCb.indeterminate = false;
+        } else if (checkedCount === 0) {
+            allCb.checked = false;
+            allCb.indeterminate = false;
+        } else {
+            allCb.checked = false;
+            allCb.indeterminate = true;
+        }
+        renderTable();
+    }
+
+    // Dynamic renderer to keep STT numbers sequential and compute total count
+    function renderTable() {
+        const tbody = document.getElementById('batch-table-body');
+        const selectedCategories = Array.from(document.querySelectorAll('input[name="cat-filter"]:checked')).map(cb => cb.value);
+        const query = document.getElementById('batch-search').value.toLowerCase().trim();
+        
+        let html = '';
+        let stt = 1;
+        let grandTotal = 0;
+
+        rawBatchData.forEach(item => {
+            const matchCategory = selectedCategories.includes(item.categoryId);
+            const matchSearch = item.dishName.toLowerCase().includes(query);
+
+            if (matchCategory && matchSearch) {
+                // Table Allocations formatting e.g. Bàn 03 (x1), Bàn 05 (x2)
+                const tableListText = item.tableDetails.map(t => {
+                    let noteText = t.note ? ` [Ghi chú: ${t.note}]` : '';
+                    return `Bàn ${t.tableNumber} (x${t.quantity})${noteText}`;
+                }).join(', ');
+
+                const optionsSubText = item.optionsText && item.optionsText !== 'Mặc định' 
+                    ? `<div class="text-xs text-gray-400 font-semibold italic mt-1"><i class="fa-solid fa-circle-info text-[9px] mr-1"></i>${item.optionsText}</div>` 
+                    : '';
+
+                html += `
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="px-5 py-4 text-center font-mono font-bold text-gray-500">${stt}</td>
+                        <td class="px-5 py-4 font-extrabold text-gray-800 text-sm">
+                            ${escapeHtml(item.dishName)}
+                            ${optionsSubText}
+                        </td>
+                        <td class="px-5 py-4 text-gray-600 text-xs font-semibold leading-relaxed">${escapeHtml(tableListText)}</td>
+                        <td class="px-5 py-4 text-center font-extrabold text-base text-gray-900 font-mono">${item.totalQuantity}</td>
+                    </tr>
+                `;
+                stt++;
+                grandTotal += item.totalQuantity;
+            }
+        });
+
+        tbody.innerHTML = html || `
+            <tr>
+                <td colspan="4" class="px-5 py-16 text-center text-gray-400 font-semibold bg-gray-50/20">
+                    <i class="fa-solid fa-box-open text-4xl mb-3 block opacity-25 text-gray-300"></i>
+                    Không có món ăn chờ chế biến phù hợp.
+                </td>
+            </tr>
+        `;
+
+        document.getElementById('total-sum').innerText = grandTotal;
+        document.getElementById('table-summary-desc').innerText = `Tìm thấy ${stt - 1} loại món cần nấu (Tổng cộng ${grandTotal} phần ăn).`;
+    }
+
     // Real-time synchronization callback via SignalR
     async function refreshQueueData() {
-        console.log("Refreshing batch groupings...");
-        // Since this page is simpler, reloading the window works perfectly.
-        // In premium style, let's fetch and update only the container.
+        console.log("Synchronizing batch groupings data...");
         try {
             const res = await fetch(window.location.href);
             if (!res.ok) return;
@@ -106,34 +190,40 @@
             const parser = new DOMParser();
             const doc = parser.parseFromString(text, 'text/html');
             
-            const newContainer = doc.getElementById('batch-items-container');
-            const oldContainer = document.getElementById('batch-items-container');
-            
-            if (newContainer && oldContainer) {
-                oldContainer.innerHTML = newContainer.innerHTML;
-            } else if (newContainer && !oldContainer) {
-                // If previously empty, full reload to draw correct grid container layout
-                window.location.reload();
-            } else if (!newContainer && oldContainer) {
-                window.location.reload();
+            const dataJson = doc.getElementById('batch-data-json');
+            if (dataJson) {
+                rawBatchData = JSON.parse(dataJson.textContent);
+                renderTable();
+                updateGomTime();
             }
         } catch (e) {
             console.error("Lỗi cập nhật: ", e);
         }
     }
 
-    // Filter dishes based on search input
-    function filterBatchDishes() {
-        const query = document.getElementById('batch-search').value.toLowerCase().trim();
-        const cards = document.querySelectorAll('.batch-item-card');
-
-        cards.forEach(card => {
-            const dishName = card.getAttribute('data-dish-name') || '';
-            if (dishName.includes(query)) {
-                card.style.display = '';
-            } else {
-                card.style.display = 'none';
-            }
-        });
+    // Utility escape HTML
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
+
+    // Initialize page
+    document.addEventListener("DOMContentLoaded", () => {
+        const dataJson = document.getElementById('batch-data-json');
+        if (dataJson) {
+            rawBatchData = JSON.parse(dataJson.textContent);
+            renderTable();
+        }
+        updateGomTime();
+    });
+</script>
+
+<!-- Embedded JSON Data representation for client-side processing -->
+<script type="application/json" id="batch-data-json">
+    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }))
 </script>

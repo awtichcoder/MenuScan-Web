@@ -130,8 +130,10 @@ namespace MenuQr.Areas.Chef.Controllers
                 orderedItems.AddRange(order.Items.Where(i => i.ItemStatus == "Ordered"));
             }
 
-            // We want to group items by: DishId + specific options JSON, to display them nicely
-            // We also group by CategoryName to satisfy the request "Gom món theo danh mục"
+            // Fetch dishes to look up category IDs
+            var dishesList = await _dishCollection.Find(_ => true).ToListAsync();
+            var dishesDict = dishesList.ToDictionary(d => d.Id);
+
             var groupedList = new List<BatchGroupViewModel>();
 
             // Group by DishId first
@@ -141,6 +143,8 @@ namespace MenuQr.Areas.Chef.Controllers
             {
                 // Get dish info
                 var firstItem = group.First();
+                dishesDict.TryGetValue(group.Key, out var dishObj);
+                var categoryId = dishObj?.CategoryId ?? "";
                 
                 // Group subgroups by SelectedOptions names combined
                 var subGroups = group.GroupBy(i => GetOptionsSummaryString(i.SelectedOptions)).ToList();
@@ -168,6 +172,7 @@ namespace MenuQr.Areas.Chef.Controllers
                         DishId = group.Key,
                         DishName = firstItem.DishName,
                         OptionsText = optText,
+                        CategoryId = categoryId,
                         TotalQuantity = totalQty,
                         TableDetails = tablesList
                     });
@@ -176,6 +181,10 @@ namespace MenuQr.Areas.Chef.Controllers
 
             // Sort grouped list by name
             groupedList = groupedList.OrderBy(g => g.DishName).ToList();
+
+            // Fetch active categories for the checkboxes filter
+            var categories = await _categoryCollection.Find(c => c.IsActive).ToListAsync();
+            ViewBag.Categories = categories;
 
             return View(groupedList);
         }
@@ -244,6 +253,7 @@ namespace MenuQr.Areas.Chef.Controllers
         public string DishId { get; set; } = null!;
         public string DishName { get; set; } = null!;
         public string OptionsText { get; set; } = string.Empty;
+        public string CategoryId { get; set; } = string.Empty;
         public int TotalQuantity { get; set; }
         public List<BatchTableDetail> TableDetails { get; set; } = new();
     }
