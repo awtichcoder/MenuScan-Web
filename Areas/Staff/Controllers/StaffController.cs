@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using MenuQr.Models;
 using MenuQr.Areas.Admin.Models;
@@ -100,6 +100,11 @@ namespace MenuQr.Areas.Staff.Controllers
                 
                 if (result.ModifiedCount > 0)
                 {
+                    var order = await _orderCollection.Find(filter).FirstOrDefaultAsync();
+                    if (order != null)
+                    {
+                        await _staffHub.Clients.All.SendAsync("NewOrder", order.TableNumber);
+                    }
                     return Json(new { success = true, message = "Thêm món thành công!" });
                 }
                 
@@ -278,6 +283,9 @@ public async Task<IActionResult> CreateTakeaway()
                                 .Set(o => o.Items, order.Items); 
                                 
                 await _orderCollection.UpdateOneAsync(o => o.Id == orderId, update);
+
+                // Notify in real-time that order status has been updated (completed)
+                await _staffHub.Clients.All.SendAsync("OrderUpdated", new { orderId = orderId, status = "Completed", tableNumber = order.TableNumber });
 
                 return Json(new { success = true, message = "Thanh toán thành công!" });
             }
