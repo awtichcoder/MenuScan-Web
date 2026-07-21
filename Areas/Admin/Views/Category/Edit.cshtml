@@ -1,0 +1,114 @@
+@model MenuQr.Areas.Admin.Models.Category
+@{
+    ViewData["Title"] = "Sua danh muc";
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+}
+
+<div class="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-sm mt-10 border border-gray-100">
+    <div class="mb-6 border-b pb-4">
+        <h2 class="text-2xl font-bold text-gray-800">Sua danh muc</h2>
+        <p class="text-gray-500 text-sm mt-1">Cap nhat thong tin hien thi cua danh muc mon an.</p>
+    </div>
+
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">Ten danh muc <span class="text-red-500">*</span></label>
+            <input type="text" id="catName" value="@Model.Name" maxlength="100"
+                   class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F3C178]">
+        </div>
+
+        <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">Mo ta ngan</label>
+            <textarea id="catDesc" rows="3"
+                      class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F3C178]">@Model.Description</textarea>
+        </div>
+
+        <div class="flex gap-4">
+            <div class="flex-1">
+                <label class="block text-sm font-bold text-gray-700 mb-1">Thu tu hien thi</label>
+                <input type="number" id="catOrder" value="@Model.DisplayOrder" min="1"
+                       class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F3C178]">
+            </div>
+
+            <div class="flex-1">
+                <label class="block text-sm font-bold text-gray-700 mb-1">Trang thai</label>
+                <select id="catIsActive"
+                        class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F3C178]">
+                    <option value="true" selected="@(Model.IsActive)">Dang hoat dong</option>
+                    <option value="false" selected="@(!Model.IsActive)">An</option>
+                </select>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
+        {
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2">Hinh anh hien tai</label>
+                <img src="@Model.ImageUrl" alt="@Model.Name" class="h-32 w-32 object-cover rounded-xl border border-gray-200">
+            </div>
+        }
+
+        <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">Doi hinh anh dai dien</label>
+            <input type="file" id="catImageFile" accept="image/*"
+                   class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#F3C178] file:text-black hover:file:bg-amber-400 cursor-pointer">
+        </div>
+
+        <div class="pt-4 mt-6 border-t flex justify-end gap-3">
+            <a href="/Admin/Category/Index"
+               class="px-6 py-2.5 rounded-xl border font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                Quay lai
+            </a>
+            <button id="btnSave" onclick="saveCategory()"
+                    class="px-6 py-2.5 rounded-xl bg-black text-white font-bold hover:bg-gray-800 transition-colors">
+                Luu thay doi
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function saveCategory() {
+        const nameInput = document.getElementById('catName').value.trim();
+        if (!nameInput) {
+            alert('Vui long nhap ten danh muc!');
+            return;
+        }
+
+        const btn = document.getElementById('btnSave');
+        btn.disabled = true;
+        btn.innerText = 'Dang luu...';
+
+        const formData = new FormData();
+        formData.append('Name', nameInput);
+        formData.append('Description', document.getElementById('catDesc').value.trim());
+        formData.append('DisplayOrder', document.getElementById('catOrder').value);
+        formData.append('IsActive', document.getElementById('catIsActive').value);
+
+        const fileInput = document.getElementById('catImageFile');
+        if (fileInput.files.length > 0) {
+            formData.append('ImageFile', fileInput.files[0]);
+        }
+
+        try {
+            const res = await fetch('/Admin/Category/EditApi/@Model.Id', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                alert(data.message || 'Da cap nhat danh muc.');
+                window.location.href = '/Admin/Category/Index';
+            } else {
+                alert(data.message || 'Co loi xay ra.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Loi ket noi may chu!');
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Luu thay doi';
+        }
+    }
+</script>

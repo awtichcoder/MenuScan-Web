@@ -5,6 +5,7 @@ using MenuQr.Data;
 using MenuQr.Models; // Thêm dòng này để gọi class trong thư mục Models
 using MenuQr;
 using PdfSharp.Fonts;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore; // Nhớ thêm using này để dùng được UseSqlServer
 
 var builder = WebApplication.CreateBuilder(args);
@@ -43,6 +44,18 @@ builder.Services.Configure<VnPaySettings>(builder.Configuration.GetSection("VnPa
 
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+    });
+
+builder.Services.AddAuthorization();
+
 
 // =======================================================
 // SETUP SQL SERVER (PHẢI NẰM TRƯỚC BUILDER.BUILD)
@@ -66,6 +79,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapStaticAssets();
 
@@ -77,7 +91,7 @@ app.MapControllerRoute(
 // Map Route mặc định cho Customer
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
+    pattern: "{controller=Account}/{action=Login}/{id?}")
     .WithStaticAssets();
 app.MapHub<StaffHub>("/staffHub");
 app.Run();

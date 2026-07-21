@@ -10,6 +10,7 @@ using PdfSharp.Drawing;
 using System.IO;
 using System;
 using MenuQr.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace MenuQr.Areas.Staff.Controllers
 {
