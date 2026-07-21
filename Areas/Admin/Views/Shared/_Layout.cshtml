@@ -1,4 +1,4 @@
-﻿@{
+@{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
     string NavClass(string controller)
     {
@@ -67,6 +67,10 @@
                 <a href="/Admin/Promotion/Index" class="@NavClass("Promotion")">
                     <i class="fa-solid fa-percent w-5 text-center"></i>
                     <span class="@NavTextClass("Promotion")">Khuyến mãi</span>
+                </a>
+                <a href="/Admin/User/Index" class="@NavClass("User")">
+                    <i class="fa-solid fa-users-gear w-5 text-center"></i>
+                    <span class="@NavTextClass("User")">Tai khoan</span>
                 </a>
             </nav>
 

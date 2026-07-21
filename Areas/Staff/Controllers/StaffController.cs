@@ -26,7 +26,7 @@ namespace MenuQr.Areas.Staff.Controllers
     }
 
     [Area("Staff")] 
-    [Authorize(Roles = "Admin,Staff")]
+    [Authorize(Roles = "Admin,Staff,Cashier")]
     public class StaffController : Controller
     {
         private readonly ApplicationDbContext _sqlContext;  
