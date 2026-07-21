@@ -10,6 +10,7 @@ using PdfSharp.Drawing;
 using System.IO;
 using System;
 using MenuQr.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace MenuQr.Areas.Staff.Controllers
 {
@@ -25,6 +26,7 @@ namespace MenuQr.Areas.Staff.Controllers
     }
 
     [Area("Staff")] 
+    [Authorize(Roles = "Admin,Staff")]
     public class StaffController : Controller
     {
         private readonly ApplicationDbContext _sqlContext;  
@@ -192,6 +194,23 @@ namespace MenuQr.Areas.Staff.Controllers
             return View(staffDashboard);
         }
 
+        // ==========================================
+        // 2. LẤY CHI TIẾT ĐƠN HÀNG (AJAX CỦA NHÂN VIÊN)
+        // ==========================================
+        [HttpPost]
+        public async Task<IActionResult> ClearServiceRequest(string tableNumber)
+        {
+            if (string.IsNullOrWhiteSpace(tableNumber))
+            {
+                return BadRequest(new { success = false, message = "Không xác định được bàn." });
+            }
+
+            await _tableCollection.UpdateOneAsync(
+                t => t.TableNumber == tableNumber && t.IsActive,
+                Builders<DiningTable>.Update.Set(t => t.NeedsService, false));
+
+            return Ok(new { success = true });
+        }
         [HttpGet]
         public async Task<IActionResult> GetOrderDetails(string orderId)
         {
@@ -282,6 +301,7 @@ namespace MenuQr.Areas.Staff.Controllers
                                 .Set(o => o.Items, order.Items); 
                                 
                 await _orderCollection.UpdateOneAsync(o => o.Id == orderId, update);
+                await _tableCollection.UpdateOneAsync(t => t.TableNumber == order.TableNumber, Builders<DiningTable>.Update.Set(t => t.NeedsService, false));
 
                 return Json(new { success = true, message = "Thanh toán thành công!" });
             }

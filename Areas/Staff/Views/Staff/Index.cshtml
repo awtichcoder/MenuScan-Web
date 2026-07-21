@@ -5,23 +5,19 @@
 }
 
 @* <div id="audio-unlock-overlay"
-     class="fixed inset-0 z-[10000] bg-black/60 flex items-center justify-center backdrop-blur-sm transition-opacity
-duration-300">
+     class="fixed inset-0 z-[10000] bg-black/60 flex items-center justify-center backdrop-blur-sm transition-opacity duration-300">
     <div class="bg-white p-8 rounded-2xl text-center max-w-sm mx-auto shadow-2xl">
-        <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4
-animate-bounce">
+        <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
             <i class="fa-solid fa-bell text-3xl"></i>
         </div>
         <h3 class="text-xl font-bold text-gray-800 mb-2">Bắt đầu ca làm việc</h3>
-        <p class="text-gray-500 text-sm mb-6">Vui lòng xác nhận để hệ thống có thể phát âm thanh thông báo khi khách gọi
-            phục vụ hoặc thanh toán.</p>
-            <button onclick="unlockAudio()"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-md flex items-center
-justify-center gap-2">
-                <i class="fa-solid fa-power-off"></i> Xác nhận & Bắt đầu
-            </button>
-        </div>
-    </div> *@
+        <p class="text-gray-500 text-sm mb-6">Vui lòng xác nhận để hệ thống có thể phát âm thanh thông báo khi khách gọi phục vụ hoặc thanh toán.</p>
+        <button onclick="unlockAudio()"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-md flex items-center justify-center gap-2">
+            <i class="fa-solid fa-power-off"></i> Xác nhận & Bắt đầu
+        </button>
+    </div>
+</div> *@
 
 <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
 
@@ -93,9 +89,13 @@ justify-center gap-2">
                                     @if (table.NeedsService)
                                     {
                                         <span
-                                            class="inline-block bg-yellow-100 text-yellow-700 border border-yellow-400 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm animate-pulse">
+                                            class="inline-block bg-yellow-100 text-yellow-700 border border-yellow-400 text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg w-full truncate shadow-sm animate-pulse mb-2">
                                             <i class="fa-solid fa-bell text-red-500 mr-1"></i> Đang gọi
                                         </span>
+                                        <button type="button" onclick="event.stopPropagation(); clearServiceRequest('@table.TableNumber')"
+                                                class="w-full bg-yellow-500 hover:bg-yellow-600 text-white text-[10px] uppercase font-bold px-2 py-1.5 rounded-lg transition">
+                                            Đã hỗ trợ
+                                        </button>
                                     }
                                     else if (hasCustomer)
                                     {
@@ -501,13 +501,30 @@ justify-center gap-2">
                         setTimeout(() => overlay.remove(), 300);
                     }
                 }
-
                 async function acceptCall(tableNumber) {
                     let toast = document.getElementById('toast-' + tableNumber);
                     if (toast) toast.remove();
                     notifiedTables = notifiedTables.filter(t => t !== tableNumber);
                     await fetch(`/Staff/Staff/ClearServiceAlert?tableNumber=${tableNumber}`, { method: 'POST' });
                     forceRefreshGrid();
+                }
+                async function clearServiceRequest(tableNumber) {
+                    let formData = new FormData();
+                    formData.append("tableNumber", tableNumber);
+
+                    try {
+                        let res = await fetch('/Staff/Staff/ClearServiceRequest', { method: 'POST', body: formData });
+                        if (res.ok) {
+                            let toast = document.getElementById('toast-' + tableNumber);
+                            if (toast) toast.remove();
+                            notifiedTables = notifiedTables.filter(t => t !== tableNumber);
+                            forceRefreshGrid();
+                        } else {
+                            alert("Không thể cập nhật trạng thái hỗ trợ.");
+                        }
+                    } catch (e) {
+                        alert("Lỗi kết nối khi cập nhật trạng thái hỗ trợ.");
+                    }
                 }
 
                 async function forceRefreshGrid() {

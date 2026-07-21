@@ -1,0 +1,164 @@
+@model List<MenuQr.Areas.Admin.Models.Dish>
+@{
+    ViewData["Title"] = "Quản lý Bật/Tắt Món ăn";
+    var categories = ViewBag.Categories as List<MenuQr.Areas.Admin.Models.Category> ?? new List<MenuQr.Areas.Admin.Models.Category>();
+}
+
+<div class="h-full flex flex-col p-6 overflow-hidden bg-gray-50">
+    <!-- Header Banner -->
+    <div class="flex flex-col md:flex-row gap-4 justify-between items-center mb-6 shrink-0 bg-white border border-gray-200 p-5 rounded-2xl shadow-sm">
+        <div>
+            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-utensils text-orange-500"></i>
+                QUẢN LÝ TRẠNG THÁI THỰC ĐƠN
+            </h2>
+            <p class="text-xs text-gray-400">Bật/tắt trạng thái hiển thị của món ăn trên menu (Ẩn món khi hết nguyên liệu).</p>
+        </div>
+
+        <div class="flex flex-wrap gap-3 w-full md:w-auto items-center">
+            <!-- Search bar -->
+            <div class="relative flex-1 md:w-64 md:flex-initial">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-gray-400">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                </span>
+                <input type="text" id="dish-search" onkeyup="filterDishes()" placeholder="Tìm món ăn nhanh..."
+                       class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 text-xs font-semibold focus:outline-none focus:border-[#F3C178] focus:ring-1 focus:ring-[#F3C178] transition-all" />
+            </div>
+
+            <!-- Category Filter Selector -->
+            <select id="category-filter" onchange="filterDishes()" 
+                    class="bg-gray-50 border border-gray-200 text-gray-850 text-xs font-semibold px-4 py-2.5 rounded-xl focus:outline-none focus:border-[#F3C178] focus:ring-1 focus:ring-[#F3C178] transition-all">
+                <option value="all">Tất cả Danh mục</option>
+                @foreach (var cat in categories)
+                {
+                    <option value="@cat.Id">@cat.Name</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <!-- Dishes List Grid -->
+    <div class="flex-1 overflow-y-auto pr-1">
+        <div id="dishes-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            @foreach (var dish in Model)
+            {
+                <div class="dish-item-card bg-white border border-gray-200 rounded-2xl p-4.5 flex gap-4 items-center shadow-sm transition-all duration-200 hover:shadow-md hover:border-gray-300"
+                     data-dish-id="@dish.Id"
+                     data-dish-name="@dish.Name.ToLower()"
+                     data-category-id="@dish.CategoryId">
+                    
+                    <!-- Dish Image -->
+                    <img src="@(string.IsNullOrEmpty(dish.ImageUrl) ? "https://via.placeholder.com/150?text=MenuScan" : dish.ImageUrl)" 
+                          alt="@dish.Name" 
+                          class="w-16 h-16 object-cover rounded-xl border border-gray-150 flex-shrink-0" />
+                    
+                    <!-- Dish Details -->
+                    <div class="flex-1 min-w-0">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200 truncate max-w-full inline-block">
+                            @dish.CategoryName
+                        </span>
+                        <h4 class="font-extrabold text-gray-800 text-sm mt-1 truncate" title="@dish.Name">@dish.Name</h4>
+                        <p class="text-xs text-orange-650 font-bold mt-0.5 font-mono">@dish.BasePrice.ToString("N0")đ</p>
+                        
+                        <!-- Availability Label -->
+                        <div class="mt-2.5 flex items-center justify-between gap-4">
+                            <span id="avail-badge-@dish.Id" class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded @(dish.IsAvailable ? "bg-emerald-50 text-emerald-600 border border-emerald-250/50" : "bg-red-50 text-red-600 border border-red-250/50")">
+                                @(dish.IsAvailable ? "Đang Bán" : "Tạm Ẩn")
+                            </span>
+
+                            <!-- Switch Toggle Switch -->
+                            <label class="relative inline-flex items-center cursor-pointer select-none">
+                                <input type="checkbox" id="switch-@dish.Id" class="sr-only peer" @(dish.IsAvailable ? "checked" : "") onchange="toggleDish('@dish.Id')">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full border border-gray-300 peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-orange-500 peer-checked:to-amber-400 peer-checked:border-orange-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    // Async Toggle request
+    async function toggleDish(dishId) {
+        const checkbox = document.getElementById(`switch-${dishId}`);
+        const badge = document.getElementById(`avail-badge-${dishId}`);
+        const isChecked = checkbox.checked;
+
+        // Optimistically update the UI badge
+        updateLocalBadge(dishId, isChecked);
+
+        try {
+            const formData = new FormData();
+            formData.append("dishId", dishId);
+            formData.append("isAvailable", isChecked);
+
+            const res = await fetch('/Chef/Kitchen/ToggleDishAvailability', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await res.json();
+            if (!data.success) {
+                // Revert on failure
+                checkbox.checked = !isChecked;
+                updateLocalBadge(dishId, !isChecked);
+                alert(data.message || "Không thể cập nhật trạng thái món!");
+            }
+        } catch (e) {
+            checkbox.checked = !isChecked;
+            updateLocalBadge(dishId, !isChecked);
+            alert("Lỗi kết nối máy chủ!");
+        }
+    }
+
+    // Update Badge styling locally
+    function updateLocalBadge(dishId, isAvailable) {
+        const badge = document.getElementById(`avail-badge-${dishId}`);
+        if (badge) {
+            if (isAvailable) {
+                badge.innerText = "Đang Bán";
+                badge.className = "text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-250/50";
+            } else {
+                badge.innerText = "Tạm Ẩn";
+                badge.className = "text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-red-50 text-red-600 border border-red-250/50";
+            }
+        }
+    }
+
+    // Filter list by category dropdown and search text input
+    function filterDishes() {
+        const query = document.getElementById('dish-search').value.toLowerCase().trim();
+        const selectedCat = document.getElementById('category-filter').value;
+        const cards = document.querySelectorAll('.dish-item-card');
+
+        cards.forEach(card => {
+            const dishName = card.getAttribute('data-dish-name') || '';
+            const catId = card.getAttribute('data-category-id') || '';
+            
+            const matchName = dishName.includes(query);
+            const matchCat = (selectedCat === 'all' || catId === selectedCat);
+
+            if (matchName && matchCat) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    // Listen to real-time dish status changes from other terminals via SignalR
+    document.addEventListener("DOMContentLoaded", () => {
+        if (typeof connection !== 'undefined') {
+            connection.on("DishAvailabilityChanged", function (data) {
+                console.log("Dish status sync received:", data);
+                const checkbox = document.getElementById(`switch-${data.dishId}`);
+                if (checkbox) {
+                    checkbox.checked = data.isAvailable;
+                    updateLocalBadge(data.dishId, data.isAvailable);
+                }
+            });
+        }
+    });
+</script>

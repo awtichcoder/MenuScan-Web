@@ -46,6 +46,9 @@
         {
             @foreach (var dish in Model.Dishes)
             {
+                var finalPrice = dish.DiscountPercent > 0
+                    ? dish.BasePrice * (100 - dish.DiscountPercent) / 100
+                    : dish.BasePrice;
                 <!-- THÊM CHỮ "dish-item" VÀO ĐẦU DANH SÁCH CLASS Ở ĐÂY 👇 -->
                 <div class="dish-item flex items-center gap-4 bg-white relative pb-4 border-b border-gray-100 last:border-0 cursor-pointer"
                      onclick="openDishModal('@dish.Id')">
@@ -57,7 +60,15 @@
 
                     <div class="flex-1 pr-10">
                         <h3 class="font-bold text-gray-900 text-base leading-tight mb-1">@dish.Name</h3>
-                        <p class="text-gray-800 font-semibold text-sm">@string.Format("{0:N0}", dish.BasePrice) VNĐ</p>
+                        @if (dish.DiscountPercent > 0)
+                        {
+                            <p class="text-gray-400 line-through text-xs">@string.Format("{0:N0}", dish.BasePrice) VNĐ</p>
+                            <p class="text-gray-800 font-semibold text-sm">@string.Format("{0:N0}", finalPrice) VNĐ <span class="text-red-500">-@dish.DiscountPercent%</span></p>
+                        }
+                        else
+                        {
+                            <p class="text-gray-800 font-semibold text-sm">@string.Format("{0:N0}", dish.BasePrice) VNĐ</p>
+                        }
                     </div>
 
                     <button
@@ -147,7 +158,9 @@
         if (!currentDish) return;
 
         quantity = 1;
-        basePrice = Number(currentDish.basePrice ?? currentDish.BasePrice ?? 0);
+        const rawBasePrice = Number(currentDish.basePrice ?? currentDish.BasePrice ?? 0);
+        const discountPercent = Number(currentDish.discountPercent ?? currentDish.DiscountPercent ?? 0);
+        basePrice = discountPercent > 0 ? Math.round(rawBasePrice * (100 - discountPercent) / 100) : rawBasePrice;
 
         document.getElementById('modalQty').innerText = quantity;
         document.getElementById('dishNote').value = '';
