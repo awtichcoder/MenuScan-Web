@@ -132,7 +132,7 @@ namespace MenuQr.Areas.Chef.Controllers
 
             // Fetch dishes to look up category IDs
             var dishesList = await _dishCollection.Find(_ => true).ToListAsync();
-            var dishesDict = dishesList.ToDictionary(d => d.Id);
+            var dishesDict = dishesList.ToDictionary(d => d.Id ?? "");
 
             var groupedList = new List<BatchGroupViewModel>();
 
@@ -161,6 +161,7 @@ namespace MenuQr.Areas.Chef.Controllers
                         return new BatchTableDetail
                         {
                             TableNumber = orderForTable?.TableNumber ?? "K/H",
+                            OrderId = orderForTable?.Id ?? "",
                             Quantity = i.Quantity,
                             Note = i.Note,
                             OrderedAt = i.OrderedAt ?? orderForTable?.CreatedAt ?? DateTime.Now
@@ -261,6 +262,7 @@ namespace MenuQr.Areas.Chef.Controllers
     public class BatchTableDetail
     {
         public string TableNumber { get; set; } = null!;
+        public string OrderId { get; set; } = string.Empty;
         public int Quantity { get; set; }
         public string Note { get; set; } = string.Empty;
         public DateTime OrderedAt { get; set; }
