@@ -11,6 +11,8 @@ using System.IO;
 using System;
 using MenuQr.Data;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
+using MenuQr.Hubs;
 
 namespace MenuQr.Areas.Staff.Controllers
 {
@@ -26,18 +28,19 @@ namespace MenuQr.Areas.Staff.Controllers
     }
 
     [Area("Staff")] 
-    [Authorize(Roles = "Admin,Staff,Cashier")]
     public class StaffController : Controller
     {
         private readonly ApplicationDbContext _sqlContext;  
         private readonly IMongoCollection<DiningTable> _tableCollection;
-        private readonly IMongoCollection<ActiveOrder> _orderCollection; 
+        private readonly IMongoCollection<ActiveOrder> _orderCollection;
+        private readonly IHubContext<StaffHub> _staffHub; 
 
-        public StaffController(ApplicationDbContext sqlContext, IMongoDatabase mongoDatabase)
+        public StaffController(ApplicationDbContext sqlContext, IMongoDatabase mongoDatabase, IHubContext<StaffHub> staffHub)
         {
             _sqlContext = sqlContext;
             _tableCollection = mongoDatabase.GetCollection<DiningTable>("DiningTables");
             _orderCollection = mongoDatabase.GetCollection<ActiveOrder>("ActiveOrders");
+            _staffHub = staffHub;
         }
 
         [HttpGet]
@@ -97,6 +100,11 @@ namespace MenuQr.Areas.Staff.Controllers
                 
                 if (result.ModifiedCount > 0)
                 {
+                    var order = await _orderCollection.Find(filter).FirstOrDefaultAsync();
+                    if (order != null)
+                    {
+                        await _staffHub.Clients.All.SendAsync("NewOrder", order.TableNumber);
+                    }
                     return Json(new { success = true, message = "Thêm món thành công!" });
                 }
                 
@@ -109,41 +117,32 @@ namespace MenuQr.Areas.Staff.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateTakeaway()
+[HttpPost]
+public async Task<IActionResult> CreateTakeaway()
+{
+    try
+    {
+        // Tạo mã TKW dựa trên timestamp để đảm bảo không bao giờ trùng nhau
+        string tableCode = "TKW-" + DateTime.UtcNow.ToString("yyMMddHHmmss"); 
+
+        var newOrder = new ActiveOrder 
         {
-            try
-            {
-                string randomId = new Random().Next(1000, 9999).ToString();
-                string tableCode = "TKW-" + randomId; 
-                string tableName = "Mang Đi #" + randomId; 
+            TableNumber = tableCode,
+            Status = "Serving", 
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            Items = new List<ActiveOrderItem>()
+        };
+        
+        await _orderCollection.InsertOneAsync(newOrder); 
 
-                var newTable = new DiningTable 
-                {
-                    TableNumber = tableCode,
-                    Name = tableName,
-                    IsActive = true,
-                    NeedsService = false
-                };
-                await _tableCollection.InsertOneAsync(newTable);
-
-                var newOrder = new ActiveOrder 
-                {
-                    TableNumber = tableCode,
-                    Status = "SERVING", 
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now,
-                    Items = new List<ActiveOrderItem>()
-                };
-                
-                await _orderCollection.InsertOneAsync(newOrder); 
-
-                return Json(new { success = true, tableNumber = tableCode, orderId = newOrder.Id });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
+        return Json(new { success = true, tableNumber = tableCode, orderId = newOrder.Id });
+    }
+    catch (Exception ex)
+    {
+        return Json(new { success = false, message = "Lỗi khi tạo đơn mang về: " + ex.Message });
+    }
+}
 
         [HttpPost]
         public async Task<IActionResult> ClearServiceAlert(string tableNumber)
@@ -194,23 +193,6 @@ namespace MenuQr.Areas.Staff.Controllers
             return View(staffDashboard);
         }
 
-        // ==========================================
-        // 2. LẤY CHI TIẾT ĐƠN HÀNG (AJAX CỦA NHÂN VIÊN)
-        // ==========================================
-        [HttpPost]
-        public async Task<IActionResult> ClearServiceRequest(string tableNumber)
-        {
-            if (string.IsNullOrWhiteSpace(tableNumber))
-            {
-                return BadRequest(new { success = false, message = "Không xác định được bàn." });
-            }
-
-            await _tableCollection.UpdateOneAsync(
-                t => t.TableNumber == tableNumber && t.IsActive,
-                Builders<DiningTable>.Update.Set(t => t.NeedsService, false));
-
-            return Ok(new { success = true });
-        }
         [HttpGet]
         public async Task<IActionResult> GetOrderDetails(string orderId)
         {
@@ -301,7 +283,9 @@ namespace MenuQr.Areas.Staff.Controllers
                                 .Set(o => o.Items, order.Items); 
                                 
                 await _orderCollection.UpdateOneAsync(o => o.Id == orderId, update);
-                await _tableCollection.UpdateOneAsync(t => t.TableNumber == order.TableNumber, Builders<DiningTable>.Update.Set(t => t.NeedsService, false));
+
+                // Notify in real-time that order status has been updated (completed)
+                await _staffHub.Clients.All.SendAsync("OrderUpdated", new { orderId = orderId, status = "Completed", tableNumber = order.TableNumber });
 
                 return Json(new { success = true, message = "Thanh toán thành công!" });
             }
@@ -468,4 +452,4 @@ namespace MenuQr.Areas.Staff.Controllers
         public List<DiningTable> Tables { get; set; }
         public List<ActiveOrder> ActiveOrders { get; set; }
     }
-}
+} 
