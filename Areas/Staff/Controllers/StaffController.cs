@@ -13,6 +13,7 @@ using MenuQr.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using MenuQr.Hubs;
+using System.Security.Claims;
 
 namespace MenuQr.Areas.Staff.Controllers
 {
@@ -228,6 +229,11 @@ public async Task<IActionResult> CreateTakeaway()
                     totalAmount = (decimal)orderedItems.Sum(i => i.FinalPrice * i.Quantity);
                 }
 
+                var cashierIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!int.TryParse(cashierIdClaim, out var cashierId))
+                {
+                    return Unauthorized(new { success = false, message = "Khong xac dinh duoc nhan vien thu ngan. Vui long dang nhap lai." });
+                }
                 var sqlOrder = new Order 
                 {
                     OrderId = orderId,
@@ -261,6 +267,7 @@ public async Task<IActionResult> CreateTakeaway()
                 var invoice = new Invoice 
                 { 
                     OrderId = orderId, 
+                    CashierId = cashierId,
                     SubTotal = totalAmount, 
                     TotalDiscount = 0,
                     FinalAmount = totalAmount,
