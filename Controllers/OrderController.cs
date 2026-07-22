@@ -164,7 +164,10 @@ namespace MenuQr.Controllers
                         .Set(o => o.Items, orderMongo.Items);
                     await _activeOrderCollection.UpdateOneAsync(o => o.Id == orderIdMongo, update);
 
-                    // Chuyá»ƒn hÆ°á»›ng khÃ¡ch vá» trang thÃ´ng bÃ¡o thÃ nh cÃ´ng
+                    // Broadcast order status change to kitchen so cards vanish in real-time
+                    await _staffHub.Clients.All.SendAsync("OrderUpdated", new { orderId = orderIdMongo, status = "Completed", tableNumber = orderMongo.TableNumber });
+
+                    // Chuyá»ƒn hÆ°á»›ng khÃ¡ch vá»  trang thÃ´ng bÃ¡o thÃ nh cÃ´ng
                     return RedirectToAction("PaymentSuccess", "Home"); 
                 }
             }
@@ -192,25 +195,28 @@ namespace MenuQr.Controllers
 
             if (existingOrder == null)
             {
-                // BÃ n trá»‘ng (láº§n Ä‘áº§u gá»i mÃ³n) -> LÆ°u tháº³ng vÃ o MongoDB
+                // BÃ n trá»‘ng (láº§n Ä‘áº§u gá» i mÃ³n) -> LÆ°u tháº³ng vÃ o MongoDB
                 incomingOrder.Status = "Serving";
                 await _activeOrderCollection.InsertOneAsync(incomingOrder);
             }
             else
             {
-                // BÃ n Ä‘ang Äƒn (gá»i thÃªm mÃ³n) -> GhÃ©p danh sÃ¡ch mÃ³n má»›i vÃ o danh sÃ¡ch mÃ³n cÅ©
+                // BÃ n Ä‘ang Äƒn (gá» i thÃªm mÃ³n) -> GhÃ©p danh sÃ¡ch mÃ³n má»›i vÃ o danh sÃ¡ch mÃ³n cÅ©
                 existingOrder.Items.AddRange(incomingOrder.Items);
                 
                 var update = Builders<ActiveOrder>.Update.Set(o => o.Items, existingOrder.Items);
                 await _activeOrderCollection.UpdateOneAsync(o => o.Id == existingOrder.Id, update);
             }
 
-            return Ok(new { success = true, message = "ÄÃ£ gá»­i thÃ´ng tin xuá»‘ng báº¿p!" });
+            // Broadcast real-time signal via SignalR to kitchen
+            await _staffHub.Clients.All.SendAsync("NewOrder", incomingOrder.TableNumber);
+
+            return Ok(new { success = true, message = "Ä Ã£ gá»­i thÃ´ng tin xuá»‘ng báº¿p!" });
         }
 
 
         // ==============================================================
-        // 2. URL Xá»¬ LÃ KHI VNPAY THANH TOÃN XONG TRáº¢ Káº¾T QUáº¢ Vá»€
+        // 2. URL Xá»¬ LÃ  KHI VNPAY THANH TOÃ N XONG TRáº¢ Káº¾T QUáº¢ Vá»€
         // ==============================================================
         [HttpGet]
         public async Task<IActionResult> VnpayReturn()
@@ -288,10 +294,13 @@ namespace MenuQr.Controllers
                         await _sqlDbContext.SaveChangesAsync();
                         await transaction.CommitAsync();
 
-                        // 3. XÃ“A TRá»NG GIá»Ž HÃ€NG TRONG MONGODB (KhÃ³a bÃ n / Giáº£i phÃ³ng bÃ n)
+                        // 3. XÃ“A TRá» NG GIá»Ž HÃ€NG TRONG MONGODB (KhÃ³a bÃ n / Giáº£i phÃ³ng bÃ n)
                         await _activeOrderCollection.DeleteOneAsync(o => o.Id == activeOrder.Id);
 
-                        // Tráº£ vá» giao diá»‡n thÃ´ng bÃ¡o thÃ nh cÃ´ng cho khÃ¡ch hÃ ng
+                        // Broadcast order status change to kitchen so cards vanish in real-time
+                        await _staffHub.Clients.All.SendAsync("OrderUpdated", new { orderId = activeOrder.Id, status = "Completed", tableNumber = activeOrder.TableNumber });
+
+                        // Tráº£ vá»  giao diá»‡n thÃ´ng bÃ¡o thÃ nh cÃ´ng cho khÃ¡ch hÃ ng
                         return View("PaymentSuccess", new { Table = tableNumber, Amount = subTotal });
                     }
                     catch (Exception ex)
