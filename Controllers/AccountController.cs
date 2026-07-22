@@ -98,7 +98,7 @@ public class AccountController : Controller
         if (principal.IsInRole("Admin"))
             return RedirectToAction("Index", "Revenue", new { area = "Admin" });
 
-        if (principal.IsInRole("Staff"))
+        if (principal.IsInRole("Staff") || principal.IsInRole("Cashier"))
             return RedirectToAction("Index", "Staff", new { area = "Staff" });
 
         if (principal.IsInRole("Kitchen") || principal.IsInRole("Chef"))
@@ -118,26 +118,18 @@ public class AccountController : Controller
 
     private async Task UpsertDefaultUserAsync(string username, string password, string fullName, string role)
     {
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == username);
-        var passwordHash = PasswordSecurity.Hash(password);
-
-        if (user == null)
-        {
-            _dbContext.Users.Add(new User
-            {
-                Username = username,
-                PasswordHash = passwordHash,
-                FullName = fullName,
-                Role = role,
-                IsActive = true
-            });
+        var userExists = await _dbContext.Users.AnyAsync(u => u.Username == username);
+        if (userExists)
             return;
-        }
 
-        user.PasswordHash = passwordHash;
-        user.FullName = fullName;
-        user.Role = role;
-        user.IsActive = true;
+        _dbContext.Users.Add(new User
+        {
+            Username = username,
+            PasswordHash = PasswordSecurity.Hash(password),
+            FullName = fullName,
+            Role = role,
+            IsActive = true
+        });
     }
 }
 
